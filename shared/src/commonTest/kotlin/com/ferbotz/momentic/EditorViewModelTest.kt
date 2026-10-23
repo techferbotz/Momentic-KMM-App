@@ -1,0 +1,168 @@
+package com.ferbotz.momentic
+
+import com.ferbotz.momentic.data.model.AspectRatio
+import com.ferbotz.momentic.presentation.editor.EditorEvent
+import com.ferbotz.momentic.presentation.editor.EditorViewModel
+import com.ferbotz.momentic.presentation.editor.FieldPath
+import com.ferbotz.momentic.presentation.editor.FieldValue
+import com.ferbotz.momentic.presentation.editor.PhotoSlot
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+/** The editor's flows against the "Open the Surprise" template's real field contract. */
+@OptIn(ExperimentalCoroutinesApi::class)
+class EditorViewModelTest {
+
+    private val gift = TemplateFixtures.template(TemplateFixtures.giftReveal)
+    private val photos = FieldPath("photos")
+
+    @BeforeTest
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun editor(
+        creations: FakeCreations = FakeCreations(),
+        images: FakeImages = FakeImages(),
+        processor: FakeProcessor = FakeProcessor(),
+        creationId: String? = null,
+    ) = EditorViewModel(
+        templateId = gift.id,
+        creationId = creationId,
+        catalogue = FakeCatalogue(gift),
+        creations = creations,
+        images = images,
+        render = FakeRender(),
+        processor = processor,
+        remoteConfig = FakeRemoteConfig(),
+    )
+
+    private fun EditorViewModel.fillRequired() {
+        update(FieldPath("recipientName"), FieldValue.Text("Divya"))
+        update(FieldPath("message"), FieldValue.Text("Happy birthday!"))
+    }
+
+    private fun EditorViewModel.photoSlots(): List<PhotoSlot> = (uiState.value.valueOf(photos) as FieldValue.Photos).photos
+
+    @Test
+    fun continueWaitsForEveryRequiredField_thenSavesTheWireData() = runTest {
+        val creations = FakeCreations()
+        val vm = editor(creations)
+        val events = mutableListOf<EditorEvent>()
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) { vm.events.collect { events += it } }
+
+        vm.continueToPublish()
+        assertEquals(setOf(FieldPath("recipientName"), FieldPath("message")), vm.uiState.value.errors.keys)
+        assertTrue(creations.created.isEmpty(), "nothing is sent while required fields are empty")
+
+        vm.fillRequired()
+        assertTrue(vm.uiState.value.errors.isEmpty(), "editing clears the field's error")
+        vm.continueToPublish()
+
+        val expected = JsonObject(
+            mapOf(
+                "recipientName" to JsonPrimitive("Divya"),
+                "message" to JsonPrimitive("Happy birthday!"),
+                "accent" to JsonPrimitive("blush"),
+            ),
+        )
+        assertEquals(expected, creations.created.single().first)
+        assertEquals(listOf<EditorEvent>(EditorEvent.ContinueToPublish("c1")), events)
+        assertEquals("c1", vm.uiState.value.creationId)
+        assertFalse(vm.uiState.value.hasUnsavedChanges)
+        collector.cancel()
+    }
+
+    @Test
+    fun photosUploadAsTheyArePicked_croppedToTheFieldsRatio_andAreWrittenAsIds() = runTest {
+        val creations = FakeCreations()
+        val processor = FakeProcessor()
+        val vm = editor(creations, processor = processor)
+
+        vm.addPhotos(photos, listOf(byteArrayOf(1), byteArrayOf(2)))
+
+        assertEquals(listOf("img1", "img2"), vm.photoSlots().map { (it as PhotoSlot.Uploaded).imageId })
+        assertEquals(listOf<AspectRatio?>(AspectRatio(4, 5), AspectRatio(4, 5)), processor.aspectRatios)
+        vm.fillRequired()
+        vm.save()
+
+        val (data, cover) = creations.created.single()
+        assertEquals(
+            JsonArray(listOf(JsonObject(mapOf("imageId" to JsonPrimitive("img1"))), JsonObject(mapOf("imageId" to JsonPrimitive("img2"))))),
+            data["photos"],
+        )
+        assertEquals("img1", cover, "the first photo is the cover")
+    }
+
+    @Test
+    fun aRemovedPhotoIsFreedAtOnce_unlessTheSavedDraftStillUsesIt() = runTest {
+        val creations = FakeCreations()
+        val images = FakeImages()
+        val vm = editor(creations, images)
+        vm.fillRequired()
+
+        vm.addPhotos(photos, listOf(byteArrayOf(1)))
+        vm.removePhoto(photos, vm.photoSlots().single().slotId)
+        assertEquals(listOf("img1"), images.deleted, "never saved, so nothing uses it")
+
+        vm.addPhotos(photos, listOf(byteArrayOf(2), byteArrayOf(3)))
+        vm.save()
+        vm.removePhoto(photos, vm.photoSlots().first().slotId)
+        assertEquals(listOf("img1"), images.deleted, "the saved draft still points at img2")
+
+        vm.save()
+        assertEquals(listOf("img1", "img2"), images.deleted)
+        assertEquals("img3", creations.updated.single().second, "the cover moves to the next photo")
+    }
+
+    @Test
+    fun photosBeyondTheFieldsMaximumAreLeftOut() = runTest {
+        val vm = editor()
+        vm.addPhotos(photos, List(8) { byteArrayOf(it.toByte()) })
+
+        assertEquals(6, vm.photoSlots().size)
+        assertTrue(vm.uiState.value.message.orEmpty().contains("6"))
+    }
+
+    @Test
+    fun aDraftReopensWithItsValues_andIsntResentUnchanged() = runTest {
+        val creations = FakeCreations().apply {
+            stored = creation(
+                id = "c9",
+                templateId = gift.id,
+                data = Json.parseToJsonElement("""{"recipientName":"Asha","message":"Hi!","photos":[{"imageId":"x1"}]}""").jsonObject,
+            )
+        }
+        val vm = editor(creations, creationId = "c9")
+
+        val state = vm.uiState.value
+        assertFalse(state.isLoading)
+        assertEquals(FieldValue.Text("Asha"), state.valueOf(FieldPath("recipientName")))
+        assertEquals("x1", (vm.photoSlots().single() as PhotoSlot.Uploaded).imageId)
+        assertEquals(FieldValue.Choice(null), state.valueOf(FieldPath("accent")), "a draft's empty field isn't refilled with the default")
+
+        vm.continueToPublish()
+        assertTrue(creations.updated.isEmpty() && creations.created.isEmpty(), "nothing changed, nothing sent")
+    }
+}
