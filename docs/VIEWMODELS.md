@@ -80,8 +80,9 @@ State: `template: TemplateDetail?`, `isLoading`, `error`. Intent: `retry()`.
 `TemplateDetail` has the description, `previewImageUrls`, `tags`, `supportsRsvp`, `pricing` (label, bundles of
 days), `fields` (what the form will ask — worth summarising), and `canBeFilledIn` (false ⇒ "update the app to use
 this template").
-**Preview** opens `resolveWebUrl(config.web.origin, template.previewCode)` in the in-app browser
-(`rememberLinkOpener().openPage(url)`).
+**See a live example** opens `resolveWebUrl(config.web.origin, template.previewCode)` in the app's own web
+frame (`WebPageRoute`, built on `platform/WebPage`). Only `greeting_open_letter` has a page on the web so far;
+the others show the renderer's branded "not available" page (contract changelog, 2026-10-09).
 
 ---
 
@@ -116,9 +117,12 @@ One input per field, by `FieldDefinition.type`; write values with `update(path, 
 
 Show `label`, `helpText`, and "optional" when `!required`.
 
-**Photos.** The UI's picker (Android `PickVisualMedia`, iOS `PHPickerViewController`) reads the picked images'
-bytes and calls `addPhotos(path, listOf(bytes…))`. The view model makes each upright, crops it to the field's
-`aspectRatio`, shrinks it and uploads it — one at a time, as picked. Render each `PhotoSlot`:
+**Photos.** The UI's picker (`platform/rememberPhotoPicker`) reads the picked images' bytes and calls
+`addPhotos(path, listOf(bytes…))`. The view model makes each upright, crops it to the field's `aspectRatio`
+(centred), shrinks it and uploads it — one at a time, as picked. A field with an aspect ratio goes through the
+crop screen first (`feature/editor/crop/CropFlow`), which hands back `PickedPhoto(bytes, PhotoFraming)` — the
+quarter turns and the crop rectangle as fractions of the turned photo — to `addFramedPhotos(path, picked)`;
+`ImageProcessor.prepare(…, framing)` applies them. Render each `PhotoSlot`:
 `Uploading` (spinner), `Uploaded(thumbUrl)` (the thumbnail; may be null for an old draft), `Failed(message,
 retryable)` (`retryPhoto(path, slotId)` when retryable). `removePhoto(path, slotId)` frees it on the server.
 
@@ -201,7 +205,12 @@ Events: `OpenUrl(url)` · `ComposeEmail(address, subject, body)` → `rememberLi
 | Need | Status |
 | --- | --- |
 | In-app browser (previews, legal pages) and `mailto:` | Ready: `rememberLinkOpener()` (Custom Tabs / `SFSafariViewController`); `openOutside(url)` hands store links to the store app |
-| Photo picker → `ByteArray`s | UI: Android `PickVisualMedia`, iOS `PHPickerViewController` |
-| Google sign-in → id token | UI: Credential Manager + googleid (Android), GoogleSignIn (iOS); needs the backend's web client id |
-| Share sheet | Ready: `platform/rememberShareSheet()` (`ACTION_SEND` chooser / `UIActivityViewController`); `shareText(text, url)` |
+| Embedded web page (live example, draft preview) | Ready: `platform/WebPage(rememberWebPageState(url))` (`WebView` / `WKWebView`) with loading progress, a failed state and `reload()`; `feature/web/WebFrame` puts the bars round it |
+| Photo picker → `ByteArray`s | Ready: `platform/rememberPhotoPicker { bytes -> }`, `pick(max)` (the system photo picker / `PHPickerViewController`, in the order picked); `decodePhotoPreview(bytes)` for the crop screen |
+| Full-screen window over everything (the crop screen) | Ready: `platform/FullScreenWindow` — edge to edge, behind clear system bars |
+| Google sign-in → id token | Seam ready: `platform/rememberGoogleSignIn()` answers "unavailable" until Credential Manager + googleid (Android) and GoogleSignIn (iOS) go in; needs the backend's web client id |
+| Share sheet | Ready: `platform/rememberShareSheet()` (`ACTION_SEND` chooser / `UIActivityViewController`); `shareText(text, url)`; `shareTo(ShareTarget.WhatsApp / Instagram / Messages, text)` opens that app, or the sheet when it isn't installed |
+| Copy to the clipboard | Ready: `platform/rememberTextCopier()` |
+| Save an image to the photo library (the QR code) | Ready: `platform/rememberImageSaver()` (MediaStore `Pictures/Momentic` / `PHPhotoLibrary`, add-only permission) |
+| Reduced motion | Ready: `platform/rememberReduceMotion()` |
 | Store purchases | Data layer: a RevenueCat `StoreBilling` once the public SDK keys exist |

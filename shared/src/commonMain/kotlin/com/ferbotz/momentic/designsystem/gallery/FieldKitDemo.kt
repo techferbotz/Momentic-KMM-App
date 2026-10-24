@@ -1,16 +1,32 @@
 package com.ferbotz.momentic.designsystem.gallery
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.unit.dp
 import com.ferbotz.momentic.data.mapper.toDomain
+import com.ferbotz.momentic.data.media.PickedPhoto
+import com.ferbotz.momentic.data.media.platformImageProcessor
+import com.ferbotz.momentic.data.result.AppResult
+import com.ferbotz.momentic.feature.editor.crop.CropFlow
+import com.ferbotz.momentic.feature.editor.crop.CropSession
+import com.ferbotz.momentic.platform.decodePhotoPreview
+import com.ferbotz.momentic.platform.rememberPhotoPicker
+import com.ferbotz.momentic.theme.Momentic
 import com.ferbotz.momentic.data.model.AspectRatio
 import com.ferbotz.momentic.data.model.ChoiceOption
 import com.ferbotz.momentic.data.model.FieldDefinition
@@ -40,26 +56,74 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * The field kit at work: the form generated from a template — one with every field type, or three real
- * templates — against a stand-in for the editor's view model. Picked photos "upload" after a moment (every
- * fourth one fails, to show that state); "Check the form" runs the same validation as "Continue".
+ * templates — against a stand-in for the editor's view model. "Add photo" opens the real photo picker and
+ * crop screen; nothing is uploaded — each framed photo goes through the real image processor on the
+ * device, and the last result shows under the buttons, to check it against the frame. Each "upload"
+ * settles after a moment (every fourth one fails, to show that state). "Check the form" runs the same
+ * validation as "Continue".
  */
 @Composable
 internal fun FieldKitDemo() {
     val scope = rememberCoroutineScope()
     var which by remember { mutableIntStateOf(0) }
     val templates = remember { listOf(EveryField, GalleryTemplates.proposal, GalleryTemplates.wedding, GalleryTemplates.giftReveal) }
-    val form = remember(which) { GalleryForm(templates[which], scope) }
+    var lastFramed by remember { mutableStateOf<ImageBitmap?>(null) }
+    var pickingFor by remember { mutableStateOf<FieldPath?>(null) }
+    // Each tap on "Add photo" is a new request — the same field twice in a row (after a cancel) still opens the picker.
+    var pickRequests by remember { mutableIntStateOf(0) }
+    var cropping by remember { mutableStateOf<Pair<FieldPath, CropSession>?>(null) }
+    val form = remember(which) {
+        GalleryForm(templates[which], scope, onPick = { path, _ ->
+            pickingFor = path
+            pickRequests++
+        })
+    }
+    val picker = rememberPhotoPicker { picked ->
+        val path = pickingFor ?: return@rememberPhotoPicker
+        pickingFor = null
+        val ratio = form.state.fields.definitionAt(path)?.aspectRatio
+        if (ratio == null) form.addPicked(path, picked.map { PickedPhoto(it) }) else cropping = path to CropSession(ratio, picked)
+    }
+    LaunchedEffect(pickRequests) {
+        val path = pickingFor ?: return@LaunchedEffect
+        val field = form.state.fields.definitionAt(path) ?: return@LaunchedEffect
+        picker.pick(if (field.type == FieldType.IMAGE) 1 else 4)
+    }
     Column(verticalArrangement = Arrangement.spacedBy(MomenticSpacing.md)) {
         SegmentedControl(listOf("All", "Question", "Invitation", "Surprise"), which, { which = it })
         Row(horizontalArrangement = Arrangement.spacedBy(MomenticSpacing.xs)) {
             SecondaryButton("Check the form", onClick = form::check, compact = true)
             QuietButton("Clear errors", onClick = form::clearErrors, compact = true)
         }
+        lastFramed?.let { framed ->
+            Text("The last photo as it would upload", style = Momentic.type.captionStrong, color = Momentic.colors.inkSoft)
+            Image(framed, contentDescription = "The last framed photo", modifier = Modifier.width(160.dp).aspectRatio(framed.width.toFloat() / framed.height))
+        }
         TemplateForm(form.state, form)
+    }
+    cropping?.let { (path, session) ->
+        CropFlow(
+            session = session,
+            onAdvance = { next -> cropping = path to next },
+            onDone = { framed ->
+                cropping = null
+                form.addPicked(path, framed)
+                val first = framed.firstOrNull() ?: return@CropFlow
+                scope.launch {
+                    val prepared = platformImageProcessor().prepare(first.bytes, session.aspectRatio, maxBytes = 5_000_000, framing = first.framing)
+                    lastFramed = (prepared as? AppResult.Success)?.data?.bytes?.let { decodePhotoPreview(it) }
+                }
+            },
+            onUnreadable = { },
+        )
     }
 }
 
-private class GalleryForm(template: TemplateDetail, private val scope: CoroutineScope) : FormActions {
+private class GalleryForm(
+    template: TemplateDetail,
+    private val scope: CoroutineScope,
+    private val onPick: (FieldPath, Int?) -> Unit,
+) : FormActions {
     private var lastId = 0
     private var picks = 0
     private fun newId(): String = "g${++lastId}"
@@ -86,9 +150,13 @@ private class GalleryForm(template: TemplateDetail, private val scope: Coroutine
         state = state.copy(values = state.values.withValueAt(path, value), errors = state.errors - path)
     }
 
-    override fun pickPhotos(path: FieldPath, room: Int?) {
+    override fun pickPhotos(path: FieldPath, room: Int?) = onPick(path, room)
+
+    /** Photos back from the picker (and the crop screen) — each "uploads" as the real editor's would. */
+    fun addPicked(path: FieldPath, picked: List<PickedPhoto>) {
         val field = state.fields.definitionAt(path) ?: return
-        val count = if (field.type == FieldType.IMAGE) 1 else minOf(room ?: 2, 2)
+        if (picked.isEmpty()) return
+        val count = if (field.type == FieldType.IMAGE) 1 else picked.size
         val slots = List(count) { PhotoSlot.Uploading(newId()) }
         state = state.copy(
             values = when (val current = state.values.valueAt(path)) {
@@ -136,7 +204,7 @@ private class GalleryForm(template: TemplateDetail, private val scope: Coroutine
                 if (fail) {
                     PhotoSlot.Failed(slotId, "No connection.", retryable = true)
                 } else {
-                    PhotoSlot.Uploaded(slotId, imageId = "img_$slotId", thumbUrl = DemoPhotos[slotId.hashCode().mod(DemoPhotos.size)], fullUrl = null)
+                    PhotoSlot.Uploaded(slotId, imageId = "img_$slotId", thumbUrl = null, fullUrl = null)
                 }
             }
         }
@@ -157,13 +225,6 @@ private class GalleryForm(template: TemplateDetail, private val scope: Coroutine
     }
 }
 
-/** The templates' own art, standing in for uploaded photos. */
-private val DemoPhotos = listOf(
-    "https://momentic.ferbotz.com/templates/proposal_memory_walk/thumb.webp",
-    "https://momentic.ferbotz.com/templates/wedding_invitation_classic/thumb.webp",
-    "https://momentic.ferbotz.com/templates/birthday_gift_reveal/thumb.webp",
-    "https://momentic.ferbotz.com/templates/birthday_for_babies/thumb.webp",
-)
 
 /** One of every field type, as the canvas's field kit board draws them. */
 private val EveryField = TemplateDetail(

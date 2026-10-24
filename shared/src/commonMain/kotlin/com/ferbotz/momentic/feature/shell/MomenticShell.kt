@@ -172,13 +172,18 @@ private fun MomenticNavHost(navController: NavHostController, modifier: Modifier
             TemplateScreenRoute(
                 templateId = entry.toRoute<TemplateRoute>().templateId,
                 onBack = navController::back,
-                onLiveExample = { url, title -> navController.navigate(WebPageRoute(url, title)) },
+                onLiveExample = { url, title, templateId -> navController.navigate(WebPageRoute(url, title, templateId)) },
                 onMakeItYours = { navController.navigate(EditorRoute(templateId = it)) },
             )
         }
         composable<WebPageRoute> { entry ->
             val route = entry.toRoute<WebPageRoute>()
-            WebPageScreenRoute(url = route.url, title = route.title, onBack = navController::back)
+            WebPageScreenRoute(
+                url = route.url,
+                title = route.title,
+                onClose = navController::back,
+                onMakeItYours = route.templateId?.let { templateId -> { navController.navigate(EditorRoute(templateId = templateId)) } },
+            )
         }
         composable<EditorRoute> { entry ->
             val route = entry.toRoute<EditorRoute>()

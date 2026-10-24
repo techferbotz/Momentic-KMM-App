@@ -24,7 +24,7 @@ import org.koin.core.parameter.parametersOf
 fun TemplateRoute(
     templateId: String,
     onBack: () -> Unit,
-    onLiveExample: (url: String, title: String) -> Unit,
+    onLiveExample: (url: String, title: String, templateId: String) -> Unit,
     onMakeItYours: (templateId: String) -> Unit,
 ) {
     val viewModel: TemplateDetailViewModel = koinViewModel { parametersOf(templateId) }
@@ -38,7 +38,7 @@ fun TemplateRoute(
             StandInNote("Asks for: " + template.fields.joinToString { it.label })
             val example = resolveWebUrl(origin, template.previewCode)
             if (example != null) {
-                SecondaryButton("See a live example", onClick = { onLiveExample(example, template.name) }, modifier = Modifier.fillMaxWidth())
+                SecondaryButton("See a live example", onClick = { onLiveExample(example, template.name, template.id) }, modifier = Modifier.fillMaxWidth())
             }
             if (template.canBeFilledIn) {
                 PrimaryButton("Make it yours", onClick = { onMakeItYours(template.id) }, modifier = Modifier.fillMaxWidth())

@@ -28,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -82,6 +83,9 @@ import com.ferbotz.momentic.designsystem.components.TopBarBadge
 import com.ferbotz.momentic.designsystem.components.ViewsBarChart
 import com.ferbotz.momentic.designsystem.icons.MomenticIcons
 import com.ferbotz.momentic.designsystem.icons.MomenticIllustrations
+import com.ferbotz.momentic.feature.publish.QrSheet
+import com.ferbotz.momentic.feature.shell.LocalMessenger
+import com.ferbotz.momentic.feature.shell.Messenger
 import com.ferbotz.momentic.presentation.moments.MomentStatus
 import com.ferbotz.momentic.theme.Momentic
 import com.ferbotz.momentic.theme.MomenticShapes
@@ -112,11 +116,14 @@ fun DesignGallery() {
     val c = Momentic.colors
     val snackbars = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val messenger = remember(scope) { Messenger(snackbars, scope) }
     var tab by remember { mutableStateOf(MainTab.Explore) }
     var segment by remember { mutableIntStateOf(1) }
     var showSheet by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
+    var showQr by remember { mutableStateOf(false) }
 
+    CompositionLocalProvider(LocalMessenger provides messenger) {
     Scaffold(
         containerColor = c.background,
         contentWindowInsets = WindowInsets(0.dp),
@@ -177,9 +184,10 @@ fun DesignGallery() {
                 }
             }
             Section("Sheet and dialog") {
-                Row(horizontalArrangement = Arrangement.spacedBy(MomenticSpacing.xs)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(MomenticSpacing.xs), verticalArrangement = Arrangement.spacedBy(MomenticSpacing.xs)) {
                     SecondaryButton("Open a sheet", onClick = { showSheet = true }, compact = true)
                     SecondaryButton("Open a dialog", onClick = { showDialog = true }, compact = true)
+                    SecondaryButton("Open the QR code", onClick = { showQr = true }, compact = true)
                 }
             }
             Section("Empty state") {
@@ -252,6 +260,15 @@ fun DesignGallery() {
             onDismiss = { showDialog = false },
             icon = MomenticIcons.Trash,
         )
+    }
+    if (showQr) {
+        QrSheet(
+            url = "https://momentic.ferbotz.com/aK3x9Qm2",
+            momentTitle = "A question for Divya",
+            shareLine = "I made something for you:",
+            onDismiss = { showQr = false },
+        )
+    }
     }
 }
 

@@ -14,6 +14,7 @@ import com.ferbotz.momentic.designsystem.components.MessageTone
 import com.ferbotz.momentic.designsystem.components.MomenticBottomSheet
 import com.ferbotz.momentic.designsystem.components.QuietButton
 import com.ferbotz.momentic.designsystem.components.SecondaryButton
+import com.ferbotz.momentic.platform.rememberGoogleSignIn
 import com.ferbotz.momentic.presentation.account.SignInEvent
 import com.ferbotz.momentic.presentation.account.SignInViewModel
 import com.ferbotz.momentic.presentation.di.koinViewModel
@@ -31,6 +32,7 @@ fun SignInSheet(onDismiss: () -> Unit, onSignedIn: () -> Unit) {
     val viewModel: SignInViewModel = koinViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val links = rememberLinkOpener()
+    val google = rememberGoogleSignIn()
     val signedIn by rememberUpdatedState(onSignedIn)
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -48,7 +50,11 @@ fun SignInSheet(onDismiss: () -> Unit, onSignedIn: () -> Unit) {
                 text = "Continue with Google",
                 onClick = {
                     viewModel.onGoogleSignInStarted()
-                    viewModel.onGoogleSignInFailed("Google sign-in isn't set up in this build yet.")
+                    google.signIn(
+                        onIdToken = viewModel::onGoogleIdToken,
+                        onCancelled = viewModel::onGoogleSignInCancelled,
+                        onFailed = viewModel::onGoogleSignInFailed,
+                    )
                 },
                 loading = state.isSigningIn,
                 modifier = Modifier.fillMaxWidth().padding(top = MomenticSpacing.lg),

@@ -8,8 +8,9 @@ import com.ferbotz.momentic.data.result.AppResult
  * Turns a picked photo into what `POST /images` should receive (`API.md`: "crop before upload"):
  *
  * 1. decoded and turned **upright** (camera photos carry their rotation in EXIF, which the server strips);
- * 2. **centre-cropped** to the field's [AspectRatio] when it has one — the template lays the photo out
- *    at that ratio;
+ * 2. turned and **cropped** as the person framed it on the crop screen ([framing]) — or, without that,
+ *    **centre-cropped** to the field's [AspectRatio] when it has one (the template lays the photo out at
+ *    that ratio);
  * 3. **scaled down** so the long edge is at most [maxDimension] (the server keeps ≤ 1280 px anyway);
  * 4. re-encoded as **JPEG**, lowering quality until it fits [maxBytes].
  *
@@ -22,6 +23,7 @@ interface ImageProcessor {
         aspectRatio: AspectRatio?,
         maxBytes: Long,
         maxDimension: Int = DEFAULT_MAX_DIMENSION,
+        framing: PhotoFraming? = null,
     ): AppResult<PreparedImage>
 
     companion object {

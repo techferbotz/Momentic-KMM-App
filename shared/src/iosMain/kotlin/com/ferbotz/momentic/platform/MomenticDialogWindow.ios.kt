@@ -11,3 +11,18 @@ import androidx.compose.ui.window.DialogProperties
 actual fun MomenticDialogWindow(onDismissRequest: () -> Unit, scrim: Color, content: @Composable () -> Unit) {
     Dialog(onDismissRequest, DialogProperties(usePlatformDefaultWidth = false, scrimColor = scrim), content)
 }
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+actual fun FullScreenWindow(onDismissRequest: () -> Unit, content: @Composable () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false,
+            usePlatformInsets = false,
+            scrimColor = Color.Transparent,
+        ),
+        content = content,
+    )
+}

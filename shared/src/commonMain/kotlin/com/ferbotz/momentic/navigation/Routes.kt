@@ -44,9 +44,12 @@ data object SettingsRoute
 @Serializable
 data class TemplateRoute(val templateId: String)
 
-/** A web page inside the app's own frame — a template's live example. [title] heads the frame. */
+/**
+ * A template's live example, inside the app's own frame. [title] heads the frame; with [templateId],
+ * "Make it yours" under the page starts the form.
+ */
 @Serializable
-data class WebPageRoute(val url: String, val title: String? = null)
+data class WebPageRoute(val url: String, val title: String? = null, val templateId: String? = null)
 
 /**
  * The input form generated from a template's field contract. [creationId] is null for a new

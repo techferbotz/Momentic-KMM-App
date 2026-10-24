@@ -136,6 +136,44 @@
     <string name="photos_hint">Up to %1$d · long-press to reorder</string>
     <string name="photos_hint_no_limit">Long-press to reorder</string>
 
+    <!-- Web pages in the app's frame: a live example, the creator's preview -->
+    <string name="web_close_example">Close example</string>
+    <string name="web_example">Example</string>
+    <string name="web_example_region">Live example of %1$s, with sample content</string>
+    <string name="web_make_it_yours">Make it yours</string>
+    <string name="web_back_to_editing">Back to editing</string>
+    <string name="web_preview_note">Preview — only you can see this</string>
+    <string name="web_preview_region">Preview of your moment</string>
+    <string name="web_send_preview">Send a preview link (works for 30 minutes)</string>
+    <string name="web_preview_share_text">Here’s a first look at what I’m making:</string>
+    <string name="web_edit">Edit</string>
+    <string name="web_publish">Publish</string>
+    <string name="web_failed_title">This page didn’t load</string>
+    <string name="web_failed_body">Check your connection, then try again.</string>
+
+    <!-- QR code sheet -->
+    <string name="qr_title">Scan to open</string>
+    <string name="qr_subtitle">Any phone camera opens “%1$s”.</string>
+    <string name="qr_subtitle_plain">Any phone camera opens your moment.</string>
+    <string name="qr_image_description">QR code for %1$s</string>
+    <string name="qr_save">Save image</string>
+    <string name="qr_share">Share</string>
+    <string name="qr_saved">Saved to your photos</string>
+    <string name="qr_not_saved">Couldn’t save it — allow Momentic to add to your photos, then try again.</string>
+
+    <!-- Crop screen -->
+    <string name="crop_title">Crop photo</string>
+    <string name="crop_cancel">Cancel</string>
+    <string name="crop_rotate">Rotate</string>
+    <string name="crop_use">Use photo</string>
+    <string name="crop_use_rest">Use the rest as they are</string>
+    <string name="crop_ratio_note">%1$s · set by this template</string>
+    <string name="crop_hint">Pinch to zoom · drag to move</string>
+    <string name="crop_zoom">Zoom</string>
+    <string name="crop_position">Photo %1$d of %2$d</string>
+    <string name="crop_area">Photo with a %1$s crop frame</string>
+    <string name="crop_unreadable">That photo couldn’t be opened. Try another one.</string>
+
     <!-- Repeating groups ("Your moments"): %1$s is the entry's name, e.g. "a moment", "moment", "moments" -->
     <string name="group_add">Add %1$s</string>
     <string name="group_empty">No %1$s yet</string>

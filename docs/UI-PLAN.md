@@ -132,6 +132,22 @@ live backend.
 fallback; QR code (encode in common code) with save-to-photos; reduced-motion flag. Blocked until you supply
 them: Google sign-in (web client id) and RevenueCat (`StoreBilling`, public keys + the Swift package).
 
+*Phase 4 status (24 Oct):* the expect/actual pieces are in `platform/` (table in `VIEWMODELS.md`). The live
+example and the draft preview open in the app's own web frame (`feature/web`) rather than the in-app browser,
+so "Make it yours", Edit and Publish sit under the page. The picker keeps the order photos were picked in and
+offers only the room the field has left; a field with an aspect ratio then goes through the crop screen
+(`feature/editor/crop`: drag, pinch or the slider to zoom, quarter turns, "Use the rest as they are" for a
+batch), and the framing travels to `ImageProcessor` as `PhotoFraming` — checked by running the real processor
+on the framed result. The QR code is our own encoder (`designsystem/qr`, no dependency: byte mode, versions
+1–10, all four levels, the mask chosen by penalty score), with the Momentic mark over the middle at Quartile;
+every version and level, the on-screen code and the saved image were decoded with Apple's CoreImage reader.
+"Save image" writes to `Pictures/Momentic` (Android asks for storage only below 10) or the photo library
+(add-only on iOS); its result shows inside the sheet, where a snackbar would be hidden. Share targets open
+WhatsApp, Instagram or Messages with the text ready, or the share sheet when the app isn't there. Google
+sign-in is a seam that answers "unavailable" until the client id arrives. Only `greeting_open_letter` has a
+web page today, so the other live examples show the renderer's "not available" page — the backend's state
+(contract changelog, 2026-10-09), not the app's. Not yet run on the iPhone (`TEAM_ID`).
+
 **5 · Screens, flow by flow** *(L)* — Explore → Create → Publish → My Moments → Settings, each screen with its
 loading, empty, error and success states from the canvas.
 
@@ -141,10 +157,12 @@ plurals, delete the placeholder UI and old theme, update `CLAUDE.md` and `VIEWMO
 ## View-model and data additions (small, additive, each tested)
 
 1. `EditorViewModel` autosave: debounced `save()` after edits, and a save state for the top-bar indicator.
-2. `ImageProcessor.prepare` / `addPhotos`: an optional crop rectangle from the crop screen (centre crop stays
-   the default). Optional: upload progress on `PhotoSlot.Uploading`.
-3. `AppPreferences.hasSeenWelcome`.
-4. A "send preview link" intent on the editor that emits `Share(url)`.
+2. ~~`ImageProcessor.prepare` / `addPhotos`: an optional crop rectangle from the crop screen (centre crop stays
+   the default).~~ Done in phase 4 as `PhotoFraming` and `addFramedPhotos`. Optional: upload progress on
+   `PhotoSlot.Uploading`.
+3. ~~`AppPreferences.hasSeenWelcome`.~~ Done in phase 3.
+4. ~~A "send preview link" intent on the editor that emits `Share(url)`.~~ Not needed: the Preview screen already
+   has the link and shares it itself.
 5. Surface `limits.maxDrafts` / `maxImages` as the "up to 20 drafts" and "60 photos" messages.
 6. `StoreProduct`: amount + currency next to `formattedPrice`, for "₹86 a day".
 7. Interim titles and covers until the backend sends them: title = the template name plus the first short
@@ -164,8 +182,9 @@ plurals, delete the placeholder UI and old theme, update `CLAUDE.md` and `VIEWMO
 | Fonts | Download Lora + Plus Jakarta Sans from `google/fonts` (OFL) into `composeResources` |
 | Location field | Address field only for now; a map preview needs a maps SDK and key |
 | Drag to reorder (photos, moments) | A small KMP reorder library rather than hand-written drag |
-| QR code | A small KMP QR library, or our own encoder if you'd rather avoid a dependency |
+| QR code | Our own encoder in common code (built in phase 4; no dependency) |
 | Colour fields | App-side preset swatches + custom hex until the field contract carries options |
 | Featured / Most chosen | First template of the first section; 7-day bundle — until the backend says |
 
-Work happens on a new branch (`feature/ui`) off `feature/data-layer`; nothing is committed without asking.
+Work happens on a new branch (`feature/ui`) off `feature/data-layer`: one commit per phase, pushed after your
+review.

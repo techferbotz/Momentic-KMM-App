@@ -1,6 +1,10 @@
 package com.ferbotz.momentic
 
+import com.ferbotz.momentic.data.media.CropRect
+import com.ferbotz.momentic.data.media.PhotoFraming
+import com.ferbotz.momentic.data.media.PickedPhoto
 import com.ferbotz.momentic.data.model.AspectRatio
+import com.ferbotz.momentic.data.result.AppError
 import com.ferbotz.momentic.presentation.editor.EditorEvent
 import com.ferbotz.momentic.presentation.editor.EditorViewModel
 import com.ferbotz.momentic.presentation.editor.FieldPath
@@ -113,6 +117,31 @@ class EditorViewModelTest {
             data["photos"],
         )
         assertEquals("img1", cover, "the first photo is the cover")
+    }
+
+    @Test
+    fun aFramedPhotoIsPreparedAsFramed_andTryAgainKeepsTheFraming() = runTest {
+        val images = FakeImages().apply { failNext = AppError.Network() }
+        val processor = FakeProcessor()
+        val vm = editor(images = images, processor = processor)
+        val framing = PhotoFraming(quarterTurns = 1, crop = CropRect(0.1f, 0.2f, 0.5f, 0.625f))
+
+        vm.addFramedPhotos(photos, listOf(PickedPhoto(byteArrayOf(1), framing)))
+        val failed = vm.photoSlots().single() as PhotoSlot.Failed
+        assertTrue(failed.retryable, "a dropped connection can be retried")
+
+        vm.retryPhoto(photos, failed.slotId)
+
+        assertEquals("img1", (vm.photoSlots().single() as PhotoSlot.Uploaded).imageId)
+        assertEquals(listOf<PhotoFraming?>(framing, framing), processor.framings, "the retry is framed like the first try")
+    }
+
+    @Test
+    fun photosAddedWithoutFramingAreCentred() = runTest {
+        val processor = FakeProcessor()
+        val vm = editor(processor = processor)
+        vm.addPhotos(photos, listOf(byteArrayOf(1)))
+        assertEquals(listOf<PhotoFraming?>(null), processor.framings)
     }
 
     @Test

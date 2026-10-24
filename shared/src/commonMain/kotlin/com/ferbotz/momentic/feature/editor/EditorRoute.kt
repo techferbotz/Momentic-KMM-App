@@ -6,21 +6,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ferbotz.momentic.designsystem.components.MessageTone
 import com.ferbotz.momentic.designsystem.components.PrimaryButton
 import com.ferbotz.momentic.designsystem.components.SecondaryButton
+import com.ferbotz.momentic.feature.editor.crop.CropFlow
+import com.ferbotz.momentic.feature.editor.crop.CropSession
 import com.ferbotz.momentic.feature.shell.LocalMessenger
 import com.ferbotz.momentic.feature.shell.MessageEffect
 import com.ferbotz.momentic.feature.shell.StandInScreen
 import com.ferbotz.momentic.feature.shell.StandInStatus
+import com.ferbotz.momentic.platform.rememberPhotoPicker
 import com.ferbotz.momentic.presentation.di.koinViewModel
 import com.ferbotz.momentic.presentation.editor.EditorEvent
 import com.ferbotz.momentic.presentation.editor.EditorViewModel
 import com.ferbotz.momentic.presentation.editor.FieldPath
 import com.ferbotz.momentic.presentation.editor.FieldValue
+import com.ferbotz.momentic.presentation.editor.definitionAt
 import com.ferbotz.momentic.theme.MomenticSpacing
 import org.koin.core.parameter.parametersOf
 
@@ -55,8 +64,21 @@ fun EditorRoute(
     }
 
     val messenger = LocalMessenger.current
-    val actions = remember(viewModel) {
-        EditorFormActions(viewModel) { _, _ -> messenger.show("Adding photos arrives with the photo picker.") }
+    // Photos: the picker, then (for a field with an aspect ratio) the crop screen, one photo at a time. Which
+    // field asked survives the app being let go while the picker is open, so the photo still finds its place.
+    var pickingFor by rememberSaveable(stateSaver = FieldPathSaver) { mutableStateOf<FieldPath?>(null) }
+    var cropping by remember { mutableStateOf<Pair<FieldPath, CropSession>?>(null) }
+    val picker = rememberPhotoPicker { picked ->
+        val path = pickingFor ?: return@rememberPhotoPicker
+        pickingFor = null
+        val ratio = viewModel.uiState.value.fields.definitionAt(path)?.aspectRatio
+        if (ratio == null) viewModel.addPhotos(path, picked) else cropping = path to CropSession(ratio, picked)
+    }
+    val actions = remember(viewModel, picker) {
+        EditorFormActions(viewModel) { path, room ->
+            pickingFor = path
+            picker.pick(room ?: MAX_PHOTOS_AT_ONCE)
+        }
     }
 
     StandInScreen(title = state.template?.name.orEmpty(), onBack = onClose) {
@@ -69,7 +91,33 @@ fun EditorRoute(
             }
         }
     }
+
+    cropping?.let { (path, session) ->
+        CropFlow(
+            session = session,
+            onAdvance = { next -> cropping = path to next },
+            onDone = { framed ->
+                cropping = null
+                viewModel.addFramedPhotos(path, framed)
+            },
+            onUnreadable = { messenger.show(it, MessageTone.Error) },
+        )
+    }
 }
+
+/** How many photos the picker offers at once for a list with no limit of its own. */
+private const val MAX_PHOTOS_AT_ONCE = 10
+
+/** A [FieldPath] as one string, for saved instance state. */
+private val FieldPathSaver = Saver<FieldPath?, String>(
+    save = { path -> path?.let { listOf(it.key, it.entryId.orEmpty(), it.childKey.orEmpty()).joinToString(SEPARATOR) } },
+    restore = { saved ->
+        val (key, entryId, childKey) = saved.split(SEPARATOR)
+        FieldPath(key, entryId.ifEmpty { null }, childKey.ifEmpty { null })
+    },
+)
+
+private const val SEPARATOR = "\u001F"
 
 /**
  * The form's intents, as the editor's view model takes them. Photos are the exception: picking them is

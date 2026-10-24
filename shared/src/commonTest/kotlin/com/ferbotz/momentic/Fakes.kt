@@ -1,6 +1,7 @@
 package com.ferbotz.momentic
 
 import com.ferbotz.momentic.data.media.ImageProcessor
+import com.ferbotz.momentic.data.media.PhotoFraming
 import com.ferbotz.momentic.data.model.AspectRatio
 import com.ferbotz.momentic.data.model.Creation
 import com.ferbotz.momentic.data.model.CreationStats
@@ -105,7 +106,14 @@ class FakeImages : ImageRepository {
     var uploads = 0
     val deleted = mutableListOf<String>()
 
+    /** The next upload fails with this, once. */
+    var failNext: AppError? = null
+
     override suspend fun upload(image: PreparedImage): AppResult<UploadedImage> {
+        failNext?.let { error ->
+            failNext = null
+            return AppResult.Failure(error)
+        }
         uploads++
         return AppResult.Success(UploadedImage("img$uploads", "https://cdn.test/full$uploads.webp", "https://cdn.test/thumb$uploads.webp", 10, 10))
     }
@@ -116,12 +124,20 @@ class FakeImages : ImageRepository {
     }
 }
 
-/** Passes the bytes straight through, remembering the crop hint it was asked for. */
+/** Passes the bytes straight through, remembering the crop hint and the framing it was asked for. */
 class FakeProcessor : ImageProcessor {
     val aspectRatios = mutableListOf<AspectRatio?>()
+    val framings = mutableListOf<PhotoFraming?>()
 
-    override suspend fun prepare(source: ByteArray, aspectRatio: AspectRatio?, maxBytes: Long, maxDimension: Int): AppResult<PreparedImage> {
+    override suspend fun prepare(
+        source: ByteArray,
+        aspectRatio: AspectRatio?,
+        maxBytes: Long,
+        maxDimension: Int,
+        framing: PhotoFraming?,
+    ): AppResult<PreparedImage> {
         aspectRatios += aspectRatio
+        framings += framing
         return AppResult.Success(PreparedImage(source, "image/jpeg", 10, 10))
     }
 }

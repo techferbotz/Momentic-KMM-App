@@ -126,3 +126,9 @@ internal fun MomenticTypography.toMaterialTypography(): Typography = Typography(
     labelMedium = label,
     labelSmall = captionStrong,
 )
+
+/**
+ * This style for text that must show exactly as typed — a link, a share code. Plus Jakarta Sans's
+ * contextual alternates would otherwise turn the `x` in `3x9` into a multiplication sign.
+ */
+fun TextStyle.literal(): TextStyle = copy(fontFeatureSettings = "\"calt\" 0")

@@ -3,6 +3,7 @@ package com.ferbotz.momentic.presentation.editor
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ferbotz.momentic.data.media.ImageProcessor
+import com.ferbotz.momentic.data.media.PickedPhoto
 import com.ferbotz.momentic.data.model.AspectRatio
 import com.ferbotz.momentic.data.model.FieldDefinition
 import com.ferbotz.momentic.data.model.FieldType
@@ -122,8 +123,8 @@ class EditorViewModel(
     private var lastId = 0
     private fun newId(): String = "f${++lastId}"
 
-    /** The picked bytes behind each photo slot still uploading or failed, so "Try again" can redo it. */
-    private val sources = mutableMapOf<String, ByteArray>()
+    /** The picked photo behind each slot still uploading or failed, so "Try again" can redo it — framed the same way. */
+    private val sources = mutableMapOf<String, PickedPhoto>()
 
     /** One photo uploads at a time — gentle on the hourly allowance and on a phone's connection. */
     private val uploadQueue = Mutex()
@@ -241,9 +242,13 @@ class EditorViewModel(
     /**
      * Adds picked photos to an `image` or `imageList` field (or a group child of one). Each is
      * prepared and uploaded in turn; extra photos beyond the field's `maxItems` are left out. A
-     * single-photo field keeps only the first and replaces what was there.
+     * single-photo field keeps only the first and replaces what was there. Each is centre-cropped to
+     * the field's aspect ratio; [addFramedPhotos] takes the crop screen's framing instead.
      */
-    fun addPhotos(path: FieldPath, picked: List<ByteArray>) {
+    fun addPhotos(path: FieldPath, picked: List<ByteArray>) = addFramedPhotos(path, picked.map { PickedPhoto(it) })
+
+    /** [addPhotos], with each photo turned and cropped the way the person framed it on the crop screen. */
+    fun addFramedPhotos(path: FieldPath, picked: List<PickedPhoto>) {
         val state = _uiState.value
         val field = state.fields.definitionAt(path) ?: return
         if (picked.isEmpty()) return
@@ -261,7 +266,7 @@ class EditorViewModel(
                 if (room <= 0) return note("You can add up to ${field.maxItems} photos here.")
                 val accepted = picked.take(room)
                 if (accepted.size < picked.size) note("Only ${field.maxItems} photos fit here, so ${picked.size - accepted.size} were left out.")
-                val slots = accepted.map { bytes -> PhotoSlot.Uploading(newId()).also { sources[it.slotId] = bytes } }
+                val slots = accepted.map { photo -> PhotoSlot.Uploading(newId()).also { sources[it.slotId] = photo } }
                 setValue(path, FieldValue.Photos(current + slots))
                 slots.forEach { startUpload(path, it.slotId, field.aspectRatio) }
             }
@@ -440,7 +445,7 @@ class EditorViewModel(
                     return@withLock
                 }
                 val maxBytes = remoteConfig.config.limits.maxUploadBytes
-                val prepared = when (val result = processor.prepare(source, aspectRatio, maxBytes)) {
+                val prepared = when (val result = processor.prepare(source.bytes, aspectRatio, maxBytes, framing = source.framing)) {
                     is AppResult.Success -> result.data
                     is AppResult.Failure -> {
                         sources.remove(slotId)

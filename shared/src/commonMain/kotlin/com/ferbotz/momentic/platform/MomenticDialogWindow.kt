@@ -9,3 +9,11 @@ import androidx.compose.ui.graphics.Color
  */
 @Composable
 expect fun MomenticDialogWindow(onDismissRequest: () -> Unit, scrim: Color, content: @Composable () -> Unit)
+
+/**
+ * A window over everything, edge to edge — for a full-screen step such as the crop screen, wherever it's
+ * composed from. Back (and nothing else) calls [onDismissRequest]; the content keeps clear of the system
+ * bars itself (`WindowInsets.safeDrawing`).
+ */
+@Composable
+expect fun FullScreenWindow(onDismissRequest: () -> Unit, content: @Composable () -> Unit)
