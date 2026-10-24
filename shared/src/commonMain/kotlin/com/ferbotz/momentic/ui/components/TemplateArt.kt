@@ -7,13 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ferbotz.momentic.theme.MomenticTheme
-import com.ferbotz.momentic.theme.categoryGradient
+import com.ferbotz.momentic.theme.occasionTint
 
 /**
  * A template's art, over a category-tinted gradient with the category's emoji. The gradient is what
@@ -29,9 +27,8 @@ fun TemplateArt(
     emoji: String? = null,
     emojiSize: TextUnit = 56.sp,
 ) {
-    val dark = MomenticTheme.isDark
-    val gradient = remember(categoryId, dark) { categoryGradient(categoryId, dark) }
-    Box(modifier.background(Brush.linearGradient(gradient)), contentAlignment = Alignment.Center) {
+    val tint = remember(categoryId) { occasionTint(categoryId) }
+    Box(modifier.background(tint.brush), contentAlignment = Alignment.Center) {
         val glyph = emoji?.takeIf { it.isNotBlank() } ?: categoryEmoji(categoryId)
         Text(text = glyph, fontSize = emojiSize)
         if (url != null) {

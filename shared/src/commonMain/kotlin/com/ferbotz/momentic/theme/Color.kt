@@ -1,119 +1,136 @@
 package com.ferbotz.momentic.theme
 
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 /*
- * Momentic's palette: soft pink and warm neutrals (the brand direction the web templates share). The
- * app is a quiet frame around the user's photos and words, so colour is saved for the moments that
- * matter — the primary action, the price, the selected state.
+ * The palette from the design canvas (Tokens & components → Colour): light pink and cream, rose for the
+ * things you tap, ink for everything you read. The web pages recipients open use the same palette, so
+ * the app and the moments it sends feel like one brand. Light theme only.
+ *
+ * Contrast rules the tokens are chosen for (pinned by ThemeContrastTest):
+ *  - body text is ink or ink-soft, never pink;
+ *  - white text only on rose-deep (badges); primary buttons are petal with an ink label;
+ *  - rose text is fine on surface and background; on blush fills and occasion tints small text is ink.
  */
 
-private val Rose = Color(0xFFB83B66)
-private val RoseDeep = Color(0xFF3E0020)
-private val Blush = Color(0xFFFFD9E2)
-private val Berry = Color(0xFF8A4A5A)
-private val BerryContainer = Color(0xFFFFD9DF)
-private val Amber = Color(0xFF8F5530)
-private val AmberContainer = Color(0xFFFFDCC6)
-
-internal val MomenticLightColorScheme = lightColorScheme(
-    primary = Rose,
-    onPrimary = Color.White,
-    primaryContainer = Blush,
-    onPrimaryContainer = RoseDeep,
-    secondary = Berry,
-    onSecondary = Color.White,
-    secondaryContainer = BerryContainer,
-    onSecondaryContainer = Color(0xFF3A0718),
-    tertiary = Amber,
-    onTertiary = Color.White,
-    tertiaryContainer = AmberContainer,
-    onTertiaryContainer = Color(0xFF331200),
-    background = Color(0xFFFFF8F7),
-    onBackground = Color(0xFF22191B),
-    surface = Color(0xFFFFF8F7),
-    onSurface = Color(0xFF22191B),
-    surfaceVariant = Color(0xFFF3DDE1),
-    onSurfaceVariant = Color(0xFF534346),
-    surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFFFF0F2),
-    surfaceContainer = Color(0xFFFAEAEC),
-    surfaceContainerHigh = Color(0xFFF4E4E6),
-    surfaceContainerHighest = Color(0xFFEEDEE0),
-    outline = Color(0xFF857376),
-    outlineVariant = Color(0xFFD8C1C5),
-    error = Color(0xFFBA1A1A),
-    onError = Color.White,
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF410002),
-    inverseSurface = Color(0xFF382E30),
-    inverseOnSurface = Color(0xFFFDEDEF),
-    inversePrimary = Color(0xFFFFB1C6),
-    scrim = Color.Black,
-)
-
-internal val MomenticDarkColorScheme = darkColorScheme(
-    primary = Color(0xFFFFB1C6),
-    onPrimary = Color(0xFF5E1131),
-    primaryContainer = Color(0xFF7E2A4B),
-    onPrimaryContainer = Blush,
-    secondary = Color(0xFFF2B6C2),
-    onSecondary = Color(0xFF52202E),
-    secondaryContainer = Color(0xFF6D3644),
-    onSecondaryContainer = BerryContainer,
-    tertiary = Color(0xFFFFB787),
-    onTertiary = Color(0xFF512300),
-    tertiaryContainer = Color(0xFF713D1A),
-    onTertiaryContainer = AmberContainer,
-    background = Color(0xFF1A1113),
-    onBackground = Color(0xFFF0DEE0),
-    surface = Color(0xFF1A1113),
-    onSurface = Color(0xFFF0DEE0),
-    surfaceVariant = Color(0xFF534346),
-    onSurfaceVariant = Color(0xFFD8C1C5),
-    surfaceContainerLowest = Color(0xFF140C0E),
-    surfaceContainerLow = Color(0xFF22191B),
-    surfaceContainer = Color(0xFF271D1F),
-    surfaceContainerHigh = Color(0xFF32282A),
-    surfaceContainerHighest = Color(0xFF3D3234),
-    outline = Color(0xFFA08C90),
-    outlineVariant = Color(0xFF534346),
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
-    errorContainer = Color(0xFF93000A),
-    onErrorContainer = Color(0xFFFFDAD6),
-    inverseSurface = Color(0xFFF0DEE0),
-    inverseOnSurface = Color(0xFF382E30),
-    inversePrimary = Rose,
-    scrim = Color.Black,
+/** Every colour the UI draws with. Read it through [Momentic.colors]. */
+@Immutable
+data class MomenticColors(
+    /** App background — a very light pink. */
+    val background: Color = Color(0xFFFDF4F5),
+    /** Cards, sheets, inputs — warm cream paper. */
+    val surface: Color = Color(0xFFFDF8F1),
+    /** Hero areas, selected chips, soft fills. Small text on it is [ink]. */
+    val blush100: Color = Color(0xFFF6DFE2),
+    /** Gradients, illustrations, progress tracks. */
+    val blush200: Color = Color(0xFFEFC9D2),
+    /** Primary buttons, with an [ink] label. */
+    val petal: Color = Color(0xFFF2AFBC),
+    val petalPressed: Color = Color(0xFFE69CAB),
+    /** Links, text buttons, the active tab, focus and selection. */
+    val rose: Color = Color(0xFFB84D66),
+    /** Pressed text actions, badges with white text, emphasis in headings. */
+    val roseDeep: Color = Color(0xFF8A2F47),
+    /** Outlines of secondary buttons and add-photo slots — decoration; the label carries the contrast. */
+    val roseSoft: Color = Color(0xFFD68D9A),
+    /** All body text and titles. */
+    val ink: Color = Color(0xFF2F2521),
+    /** Secondary text, helper text, captions. */
+    val inkSoft: Color = Color(0xFF6D5C53),
+    /** Borders and dividers; also the disabled fill. Never text. */
+    val line: Color = Color(0xFFEAD7DB),
+    /** "Live", uploaded, saved. */
+    val success: Color = Color(0xFF2F6B52),
+    val successFill: Color = Color(0xFFE4F0E9),
+    /** "Ending soon". */
+    val warning: Color = Color(0xFF7A5214),
+    val warningFill: Color = Color(0xFFFBEFD9),
+    /** Errors — always with an icon and words, never colour alone. */
+    val error: Color = Color(0xFFA3242E),
+    val errorFill: Color = Color(0xFFFBE9EA),
+    /** Outline of destructive buttons. */
+    val errorSoft: Color = Color(0xFFDC8B88),
+    /** The "Ended" chip. */
+    val endedFill: Color = Color(0xFFEFE8E4),
+    /** Ink at 40% — behind sheets and dialogs. */
+    val scrim: Color = Color(0x662F2521),
+    /** The tint every shadow is cast in. */
+    val shadow: Color = Color(0xFF8A2F47),
+    /** Only for text and icons on [roseDeep], and the paper behind a QR code. */
+    val white: Color = Color.White,
 )
 
 /**
- * Two-stop gradients standing in for a template's art while it loads or when it has none yet (five
- * of the six live templates have no thumbnail today). Keyed by category, so a card still reads as
- * "a birthday thing" before its picture arrives.
+ * A category's soft gradient and its accent — chips, section headers, art placeholders. The accent
+ * reads as text on its own tint (AA), but small text on a tint stays [MomenticColors.ink].
  */
-internal fun categoryGradient(categoryId: String, dark: Boolean): List<Color> {
-    val light = when (categoryId) {
-        "birthday" -> listOf(Color(0xFFFFE1C7), Color(0xFFFFC2D4))
-        "wedding" -> listOf(Color(0xFFF8EEDC), Color(0xFFF1D3DA))
-        "love" -> listOf(Color(0xFFFFC9D6), Color(0xFFD9A7C7))
-        "anniversary" -> listOf(Color(0xFFE9DDF6), Color(0xFFF6C9D6))
-        "friendship" -> listOf(Color(0xFFD7F0E6), Color(0xFFD5E6FA))
-        "greeting" -> listOf(Color(0xFFFFF0D9), Color(0xFFFBD5DC))
-        else -> listOf(Color(0xFFFCE4EA), Color(0xFFF3D0DA))
-    }
-    return if (dark) light.map { it.copy(alpha = 0.22f).compositeOverDark() } else light
+@Immutable
+data class OccasionTint(
+    val start: Color,
+    val end: Color,
+    val accent: Color,
+) {
+    /** The tint as a wash from [start] (top left) to [end] (bottom right). */
+    val brush: Brush get() = Brush.linearGradient(listOf(start, end))
 }
 
-private fun Color.compositeOverDark(): Color {
-    val base = Color(0xFF2A1F22)
-    return Color(
-        red = red * alpha + base.red * (1 - alpha),
-        green = green * alpha + base.green * (1 - alpha),
-        blue = blue * alpha + base.blue * (1 - alpha),
-        alpha = 1f,
-    )
+/** The six occasions, keyed by the feed's category id; anything else gets the greeting blush. */
+fun occasionTint(categoryId: String?): OccasionTint = when (categoryId) {
+    "birthday" -> OccasionTint(Color(0xFFF9EAD0), Color(0xFFF0D5A5), Color(0xFF7A5214))
+    "wedding" -> OccasionTint(Color(0xFFE2E7EE), Color(0xFFC7D2E1), Color(0xFF384860))
+    "love" -> OccasionTint(Color(0xFFF7E1E4), Color(0xFFEEC7D0), Color(0xFF8A2F47))
+    "anniversary" -> OccasionTint(Color(0xFFE9E3F2), Color(0xFFD4C9E8), Color(0xFF47376A))
+    "friendship" -> OccasionTint(Color(0xFFDDEEE1), Color(0xFFC0DDCE), Color(0xFF21503D))
+    else -> OccasionTint(Color(0xFFF6DFE2), Color(0xFFEFC9D2), Color(0xFF8A2F47))
 }
+
+internal val LocalMomenticColors = staticCompositionLocalOf { MomenticColors() }
+
+/**
+ * The tokens mapped onto Material 3, for the Material components the app still uses as-is (text
+ * selection, date and time pickers, the sheet's drag behaviour). Momentic components read
+ * [MomenticColors] directly.
+ */
+internal fun MomenticColors.toMaterialColorScheme(): ColorScheme = lightColorScheme(
+    primary = rose,
+    onPrimary = white,
+    primaryContainer = blush100,
+    onPrimaryContainer = ink,
+    inversePrimary = petal,
+    secondary = roseDeep,
+    onSecondary = white,
+    secondaryContainer = petal,
+    onSecondaryContainer = ink,
+    tertiary = success,
+    onTertiary = white,
+    tertiaryContainer = successFill,
+    onTertiaryContainer = success,
+    background = background,
+    onBackground = ink,
+    surface = surface,
+    onSurface = ink,
+    surfaceVariant = blush100,
+    onSurfaceVariant = inkSoft,
+    surfaceTint = surface,
+    inverseSurface = ink,
+    inverseOnSurface = surface,
+    error = error,
+    onError = white,
+    errorContainer = errorFill,
+    onErrorContainer = error,
+    outline = inkSoft,
+    outlineVariant = line,
+    scrim = scrim,
+    surfaceBright = surface,
+    surfaceDim = background,
+    surfaceContainerLowest = surface,
+    surfaceContainerLow = surface,
+    surfaceContainer = surface,
+    surfaceContainerHigh = surface,
+    surfaceContainerHighest = blush100,
+)

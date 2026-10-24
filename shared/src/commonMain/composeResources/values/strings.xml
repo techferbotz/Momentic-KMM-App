@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tabs -->
+    <string name="tab_explore">Explore</string>
+    <string name="tab_moments">My Moments</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Labels for icon-only buttons -->
+    <string name="cd_back">Back</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_dismiss">Dismiss</string>
+    <string name="cd_loading">Loading</string>
+
+    <!-- Autosave indicator in the form's top bar -->
+    <string name="save_saving">Saving…</string>
+    <string name="save_saved">Saved</string>
+    <string name="save_offline">Offline — saves when you’re back</string>
+
+    <!-- Status chips -->
+    <string name="status_draft">Draft</string>
+    <string name="status_live">Live</string>
+    <plurals name="status_live_days">
+        <item quantity="one">Live · %1$d day left</item>
+        <item quantity="other">Live · %1$d days left</item>
+    </plurals>
+    <string name="status_ends_today">Ends today</string>
+    <string name="status_ending_tomorrow">Ending tomorrow</string>
+    <string name="status_ended">Ended</string>
+
+    <!-- Tier badges -->
+    <string name="tier_simple">Simple</string>
+    <string name="tier_signature">Signature</string>
+    <string name="tier_premium">Premium</string>
+
+    <!-- Cards -->
+    <string name="card_featured">Featured</string>
+    <plurals name="views_count">
+        <item quantity="one">%1$d view</item>
+        <item quantity="other">%1$d views</item>
+    </plurals>
+    <string name="views_none">No views yet</string>
+
+    <!-- Views chart -->
+    <string name="chart_today">Today</string>
+    <string name="chart_tooltip">%1$s · %2$s</string>
+    <string name="chart_summary">Views per day for the last %1$d days. Most in a day: %2$d. Today: %3$d.</string>
+</resources>

@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
@@ -14,20 +13,18 @@ import androidx.compose.ui.platform.LocalContext
 import com.ferbotz.momentic.data.util.isWebUrl
 import com.ferbotz.momentic.data.util.mailtoUri
 import com.ferbotz.momentic.platform.findActivity
-import com.ferbotz.momentic.theme.MomenticTheme
+import com.ferbotz.momentic.theme.Momentic
 
-/** Custom Tabs, in the palette of the screen the page was opened from. */
+/** Custom Tabs, light, with the app's background as the toolbar. */
 @Composable
 actual fun rememberLinkOpener(): LinkOpener {
     val context = LocalContext.current
-    val dark = MomenticTheme.isDark
-    val toolbarColor = MaterialTheme.colorScheme.background.toArgb()
-    return remember(context, dark, toolbarColor) { AndroidLinkOpener(context, dark, toolbarColor) }
+    val toolbarColor = Momentic.colors.background.toArgb()
+    return remember(context, toolbarColor) { AndroidLinkOpener(context, toolbarColor) }
 }
 
 private class AndroidLinkOpener(
     private val context: Context,
-    private val dark: Boolean,
     private val toolbarColor: Int,
 ) : LinkOpener {
 
@@ -36,7 +33,7 @@ private class AndroidLinkOpener(
         if (!isWebUrl(target)) return false
         val tab = CustomTabsIntent.Builder()
             .setShowTitle(true)
-            .setColorScheme(if (dark) CustomTabsIntent.COLOR_SCHEME_DARK else CustomTabsIntent.COLOR_SCHEME_LIGHT)
+            .setColorScheme(CustomTabsIntent.COLOR_SCHEME_LIGHT)
             .setDefaultColorSchemeParams(
                 CustomTabColorSchemeParams.Builder().setToolbarColor(toolbarColor).build(),
             )

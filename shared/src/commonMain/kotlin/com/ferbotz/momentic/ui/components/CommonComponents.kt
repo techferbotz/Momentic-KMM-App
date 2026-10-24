@@ -31,7 +31,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.ferbotz.momentic.theme.OverlineStyle
+import com.ferbotz.momentic.theme.Momentic
 
 /** A small pill over template art — the price ("from Rs.50/day"). */
 @Composable
@@ -72,7 +72,7 @@ fun TagChip(text: String, modifier: Modifier = Modifier) {
 fun Overline(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text.uppercase(),
-        style = OverlineStyle,
+        style = Momentic.type.eyebrow,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier,
     )

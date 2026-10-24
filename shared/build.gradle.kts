@@ -102,3 +102,8 @@ kotlin {
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
 }
+
+// Fonts (and their licences) live in commonMain/composeResources; the generated accessors sit beside the app's code.
+compose.resources {
+    packageOfResClass = "com.ferbotz.momentic.resources"
+}
