@@ -29,6 +29,15 @@ private class IosLinkOpener : LinkOpener {
         return true
     }
 
+    override fun openOutside(url: String): Boolean {
+        val target = url.trim()
+        if (!isWebUrl(target)) return false
+        val nsUrl = NSURL.URLWithString(target) ?: return false
+        // An App Store link opens in the App Store; anything else in Safari.
+        UIApplication.sharedApplication.openURL(nsUrl, options = emptyMap<Any?, Any>(), completionHandler = null)
+        return true
+    }
+
     override fun composeEmail(address: String, subject: String?, body: String?, onUnavailable: () -> Unit) {
         val url = NSURL.URLWithString(mailtoUri(address, subject, body)) ?: return onUnavailable()
         // The answer comes back on the main queue, which is where Compose state may be touched.

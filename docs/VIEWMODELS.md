@@ -13,7 +13,8 @@ LaunchedEffect(vm) { vm.events.collect { event -> /* navigate, open, share */ } 
 ```
 
 `koinViewModel()` / `koinGet()` are in `presentation/di/PresentationModule.kt`. A view model is scoped to its
-NavHost back-stack entry. Parameters are listed per screen below.
+NavHost back-stack entry; `koinViewModel(owner)` scopes it to another entry instead — Explore and Category share
+one `FeedViewModel` through the Explore graph's entry. Parameters are listed per screen below.
 
 Conventions every screen shares:
 
@@ -59,6 +60,10 @@ Call `onAppForegrounded()` on every return to the foreground (`LifecycleStartEff
 ### `AppSessionViewModel`
 `session: StateFlow<SessionState>` (`SignedOut` / `SignedIn(user)`), and `notices: Flow<String>` — show as a
 snackbar ("You've been signed out…" after a rejected token). Finishes unconfirmed paid purchases on launch.
+
+### First launch
+No view model: `AppPreferences.hasSeenWelcome` / `markWelcomeSeen()` (per device, kept on sign-out) decide
+whether the welcome shows before the app (`feature/gate/WelcomeGate`).
 
 ---
 
@@ -195,8 +200,8 @@ Events: `OpenUrl(url)` · `ComposeEmail(address, subject, body)` → `rememberLi
 
 | Need | Status |
 | --- | --- |
-| In-app browser (previews, legal pages) and `mailto:` | Ready: `rememberLinkOpener()` (Custom Tabs / `SFSafariViewController`) |
+| In-app browser (previews, legal pages) and `mailto:` | Ready: `rememberLinkOpener()` (Custom Tabs / `SFSafariViewController`); `openOutside(url)` hands store links to the store app |
 | Photo picker → `ByteArray`s | UI: Android `PickVisualMedia`, iOS `PHPickerViewController` |
 | Google sign-in → id token | UI: Credential Manager + googleid (Android), GoogleSignIn (iOS); needs the backend's web client id |
-| Share sheet | UI: `Intent.ACTION_SEND` / `UIActivityViewController` |
+| Share sheet | Ready: `platform/rememberShareSheet()` (`ACTION_SEND` chooser / `UIActivityViewController`); `shareText(text, url)` |
 | Store purchases | Data layer: a RevenueCat `StoreBilling` once the public SDK keys exist |

@@ -9,16 +9,18 @@ import kotlin.uuid.Uuid
  * Small key-value store for identity and the remote-config cache, backed by multiplatform-settings
  * (SharedPreferences on Android, NSUserDefaults on iOS).
  *
- * It holds four things:
+ * It holds five things:
  * - the **install id**, generated once and sent as `X-Device-Id` (remote config's bucketing key);
  * - the **draft token** from `POST /draft-sessions` — the anonymous device principal that owns
  *   everything made before sign-in;
  * - the **access token** once signed in. It never expires (HOA protocol 04): it is stored once and
  *   reused on every launch until the server rejects it;
- * - the last good **remote config** document, so the next launch starts on yesterday's config.
+ * - the last good **remote config** document, so the next launch starts on yesterday's config;
+ * - whether the first-launch **welcome** has been seen.
  *
- * Only the access token belongs to the session. The install id, the draft token and the config are
- * per device, so [clearSession] leaves them alone — signing out must not throw away a kill switch.
+ * Only the access token belongs to the session. The install id, the draft token, the config and the
+ * welcome flag are per device, so [clearSession] leaves them alone — signing out must not throw away a
+ * kill switch, or show the welcome again.
  */
 class AppPreferences(private val settings: Settings) {
 
@@ -91,10 +93,18 @@ class AppPreferences(private val settings: Settings) {
         settings[KEY_REMOTE_CONFIG_FETCHED_AT] = fetchedAtEpochMillis
     }
 
+    /** True once "Start creating" on the first-launch welcome has been tapped on this device. */
+    val hasSeenWelcome: Boolean
+        get() = settings.getBoolean(KEY_SEEN_WELCOME, false)
+
+    fun markWelcomeSeen() {
+        settings[KEY_SEEN_WELCOME] = true
+    }
+
     /**
      * Ends the session: forgets the access token and the cached profile. Keeps the install id, the
-     * draft token, the remote config and any pending purchases, which belong to the device rather
-     * than the account.
+     * draft token, the remote config, the welcome flag and any pending purchases, which belong to the
+     * device rather than the account.
      */
     fun clearSession() {
         settings.remove(KEY_AUTH_TOKEN)
@@ -109,5 +119,6 @@ class AppPreferences(private val settings: Settings) {
         const val KEY_PENDING_PURCHASES = "momentic.pending_purchases"
         const val KEY_REMOTE_CONFIG = "momentic.remote_config"
         const val KEY_REMOTE_CONFIG_FETCHED_AT = "momentic.remote_config_fetched_at"
+        const val KEY_SEEN_WELCOME = "momentic.seen_welcome"
     }
 }

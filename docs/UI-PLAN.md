@@ -113,6 +113,19 @@ typed into as well; "Required" became "Fill this in to continue" / "Add a number
 **3 · Navigation shell** *(S)* — routes for the table above, a tab scaffold, the gate, Welcome, a snackbar
 host for every `message`, event collection per route. Exit: every route reachable with stub screens.
 
+*Phase 3 status (24 Oct):* routes in `navigation/Routes.kt` (the three tabs are nested graphs with their own
+back stacks; Category shares Explore's feed through the graph's entry). `feature/shell/MomenticShell` holds
+the scaffold, the bottom bar and the NavHost; `Messenger` runs every snackbar in the shell's scope. The gate
+screens and Welcome are the designed ones (`feature/gate`): maintenance retries itself every 30 s, the update
+nudge is a banner on Explore, store links go to the store app (`LinkOpener.openOutside`), and Welcome is a
+gate in front of the NavHost rather than a route, shown once per device. Each `XRoute` has its final event
+wiring; the screen bodies are labelled stand-ins until phase 5. The basic share sheet came forward from
+phase 4 because the routes' Share events need it. Checked on the emulator against the live API: Welcome →
+Explore → Category → Template → live example → form (validation, the snackbar, scroll to the first error),
+the tab back stacks, Settings and the sign-in sheet. Not opened on a device: Preview, Publish, Published,
+Moment, RSVPs, Purchases and Delete account — reaching them means creating a draft (or signing in) on the
+live backend.
+
 **4 · Platform pieces** *(M — can run in parallel with 5)* — expect/actual for: embedded web view (Android
 `WebView`, iOS `WKWebView`); photo picker (`PickVisualMedia` / `PHPickerViewController`); crop screen
 (pan + zoom under a locked frame); share sheet plus WhatsApp / Messages targets with a system-sheet

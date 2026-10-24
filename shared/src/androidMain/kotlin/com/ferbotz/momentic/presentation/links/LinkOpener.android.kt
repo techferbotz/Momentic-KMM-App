@@ -51,6 +51,21 @@ private class AndroidLinkOpener(
         }
     }
 
+    override fun openOutside(url: String): Boolean {
+        val target = url.trim()
+        if (!isWebUrl(target)) return false
+        // A plain VIEW: a Play Store link opens in the Play Store app, anything else in the browser.
+        val view = Intent(Intent.ACTION_VIEW, Uri.parse(target))
+        val activity = context.findActivity()
+        if (activity == null) view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return try {
+            (activity ?: context).startActivity(view)
+            true
+        } catch (e: ActivityNotFoundException) {
+            false
+        }
+    }
+
     override fun composeEmail(address: String, subject: String?, body: String?, onUnavailable: () -> Unit) {
         // SENDTO + mailto: only mail apps answer it.
         val email = Intent(Intent.ACTION_SENDTO, Uri.parse(mailtoUri(address, subject, body)))

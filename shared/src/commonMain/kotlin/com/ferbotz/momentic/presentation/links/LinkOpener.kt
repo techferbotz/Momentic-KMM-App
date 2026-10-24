@@ -23,6 +23,12 @@ interface LinkOpener {
     fun openPage(url: String): Boolean
 
     /**
+     * Hands [url] to the system instead — a store listing, so the store app opens it rather than an
+     * in-app browser. Only absolute `http`/`https` URLs. Returns false when nothing took it.
+     */
+    fun openOutside(url: String): Boolean
+
+    /**
      * Starts an email to [address] in the device's mail app, with [subject] and [body] filled in when
      * given. [onUnavailable] runs when no app takes it — possibly after this returns, because iOS
      * answers asynchronously.

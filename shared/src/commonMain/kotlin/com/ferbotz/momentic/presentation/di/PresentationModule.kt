@@ -3,6 +3,7 @@ package com.ferbotz.momentic.presentation.di
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ferbotz.momentic.presentation.account.AccountViewModel
 import com.ferbotz.momentic.presentation.account.SignInViewModel
@@ -84,6 +85,14 @@ val presentationModule: Module = module {
 @Composable
 inline fun <reified T : ViewModel> koinViewModel(noinline parameters: ParametersDefinition? = null): T =
     viewModel { KoinPlatform.getKoin().get<T>(parameters = parameters) }
+
+/**
+ * The same, scoped to [owner] — a nav graph's back-stack entry, say, so the screens of one tab share a
+ * view model (Explore and its categories share the one feed).
+ */
+@Composable
+inline fun <reified T : ViewModel> koinViewModel(owner: ViewModelStoreOwner, noinline parameters: ParametersDefinition? = null): T =
+    viewModel(viewModelStoreOwner = owner) { KoinPlatform.getKoin().get<T>(parameters = parameters) }
 
 /**
  * Obtains a plain (non-[ViewModel]) singleton from Koin. Remembered, so the lookup happens once per

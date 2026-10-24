@@ -5,6 +5,32 @@
     <string name="tab_moments">My Moments</string>
     <string name="tab_settings">Settings</string>
 
+    <!-- The gate: maintenance, a required update, the update banner -->
+    <string name="maintenance_title">We’re making Momentic better. Back in a few minutes.</string>
+    <string name="maintenance_auto">This screen refreshes by itself</string>
+    <string name="maintenance_art">A watering can tending a small sprout</string>
+    <string name="update_title">A new version of Momentic is ready</string>
+    <string name="update_body">Update to keep making and sharing moments. Your drafts stay right where you left them.</string>
+    <string name="update_button">Update</string>
+    <string name="update_art">A phone receiving a new version</string>
+    <string name="update_banner">A new version is available</string>
+
+    <!-- First launch -->
+    <string name="welcome_title">Make something they’ll keep</string>
+    <string name="welcome_body">Pick an experience, add your words and photos, and share it as a link. It takes under a minute.</string>
+    <string name="welcome_start">Start creating</string>
+    <string name="welcome_no_account">No account needed to start</string>
+
+    <!-- App-wide notices -->
+    <string name="notice_signed_out">You’re signed out.</string>
+    <string name="notice_account_deleted">Your account has been deleted.</string>
+    <string name="notice_no_mail_app">No mail app is set up on this device. Write to %1$s.</string>
+    <string name="notice_cant_open">Couldn’t open that page.</string>
+
+    <!-- Shared actions -->
+    <string name="action_try_again">Try again</string>
+    <string name="action_open_in_browser">Open in browser</string>
+
     <!-- Labels for icon-only buttons -->
     <string name="cd_back">Back</string>
     <string name="cd_close">Close</string>
