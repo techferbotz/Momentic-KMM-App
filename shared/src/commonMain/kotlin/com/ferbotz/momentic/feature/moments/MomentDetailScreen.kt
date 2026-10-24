@@ -335,7 +335,7 @@ private fun LinkCard(url: String, offline: Boolean, onCopy: () -> Unit, onShare:
                 text = url.removePrefix("https://").removePrefix("http://"),
                 style = Momentic.type.label.copy(fontSize = 15.sp).literal(),
                 color = if (offline) c.inkSoft else c.ink,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

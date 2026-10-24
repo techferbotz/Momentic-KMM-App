@@ -289,6 +289,11 @@ private fun ShareTargetButton(icon: ImageVector, label: String, onClick: () -> U
         ) {
             Icon(icon, contentDescription = null, tint = c.ink, modifier = Modifier.size(MomenticSizes.icon))
         }
-        Text(label, style = Momentic.type.captionStrong, color = c.ink, maxLines = 1)
+        BasicText(
+            text = label,
+            style = Momentic.type.captionStrong.copy(color = c.ink, textAlign = TextAlign.Center),
+            maxLines = 1,
+            autoSize = TextAutoSize.StepBased(minFontSize = 7.sp, maxFontSize = Momentic.type.captionStrong.fontSize),
+        )
     }
 }

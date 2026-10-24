@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -66,6 +68,7 @@ fun DurationChoices(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DurationOptionRow(row: DurationRow, selected: Boolean, compact: Boolean, onClick: () -> Unit) {
     val c = Momentic.colors
@@ -89,7 +92,11 @@ private fun DurationOptionRow(row: DurationRow, selected: Boolean, compact: Bool
             if (selected) Box(Modifier.size(10.dp).clip(CircleShape).background(c.rose))
         }
         Column(Modifier.weight(1f)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(MomenticSpacing.xs), verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(MomenticSpacing.xs),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
                     text = row.title,
                     style = Momentic.type.body.copy(fontWeight = FontWeight.Bold, fontSize = if (compact) 15.sp else 16.sp),
@@ -119,10 +126,10 @@ private fun MostChosenBadge() {
     val c = Momentic.colors
     Box(
         Modifier
-            .height(22.dp)
+            .heightIn(min = 22.dp)
             .clip(MomenticShapes.pill)
             .background(c.roseDeep)
-            .padding(horizontal = MomenticSpacing.xs),
+            .padding(horizontal = MomenticSpacing.xs, vertical = 1.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(stringResource(Res.string.paywall_most_chosen), style = Momentic.type.captionStrong.copy(fontWeight = FontWeight.Bold), color = c.white)

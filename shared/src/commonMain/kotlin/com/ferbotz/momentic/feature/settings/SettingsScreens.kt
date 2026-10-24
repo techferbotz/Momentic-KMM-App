@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -172,7 +173,8 @@ private fun AccountCard(user: User) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(56.dp).clip(CircleShape).background(c.blush100), contentAlignment = Alignment.Center) {
-            Text(initials(user.name ?: user.email.orEmpty()), style = Momentic.type.h2, color = c.roseDeep)
+            // Sized to the circle, not the text setting: the avatar doesn't grow with it.
+            Text(initials(user.name ?: user.email.orEmpty()), style = Momentic.type.h2.copy(fontSize = with(LocalDensity.current) { 20.dp.toSp() }), color = c.roseDeep)
             if (user.avatarUrl != null) {
                 AsyncImage(model = user.avatarUrl, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
             }

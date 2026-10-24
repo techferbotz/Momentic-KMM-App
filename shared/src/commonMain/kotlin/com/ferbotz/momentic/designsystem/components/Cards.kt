@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -179,6 +181,7 @@ fun FeaturedTemplateCard(
  *
  * @param views null hides the count (drafts); 0 reads "No views yet".
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MomentRow(
     title: String,
@@ -214,10 +217,11 @@ fun MomentRow(
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = Momentic.type.cardTitle, color = c.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(subtitle, style = Momentic.type.caption, color = c.inkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Row(
+            FlowRow(
                 modifier = Modifier.padding(top = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 if (status != null) StatusChip(status)
                 if (views != null) ViewCount(views)

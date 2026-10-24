@@ -67,9 +67,20 @@ shared/src/commonMain/kotlin/com/ferbotz/momentic/
   data/di/             Koin data modules, initKoin()
   presentation/        one view model (+ UiState, events) per screen — see docs/VIEWMODELS.md
   presentation/editor/ FormEngine: field contract ⇄ form values ⇄ the creation's `data`
-  ui/, theme/, App.kt  placeholder UI (feed, template, gate screens) — to be replaced by the real UI
-shared/src/androidMain, iosMain   HTTP engines, build info, image processor, link opener
+  theme/               MomenticTheme: the canvas's colour, type, shape, spacing, shadow and motion tokens (light only)
+  designsystem/        components/, fields/ (one input per field type), icons/, qr/ (our own encoder),
+                       gallery/ — the debug design gallery, whose Screens section draws every screen from fake states
+  feature/<flow>/      XScreen (stateless, from a UiState) + XRoute (view model, events, navigation) per screen;
+                       shell/ (scaffold, bottom bar, NavHost, Messenger), gate/ (maintenance, update, Welcome)
+  navigation/          type-safe routes; the three tabs are nested graphs
+  platform/            expect/actual: web page, photo picker, share sheet, QR save, Google seam, windows, Back
+  App.kt               theme → image loader → remote-config gate → Welcome → shell
+shared/src/androidMain, iosMain   HTTP engines, build info, image processor, link opener, the platform/ actuals
 ```
+
+The UI is built from the design canvas (<https://claude.ai/artifact/VatZ35tXPVK3teSEzX3oQe>); `docs/UI-PLAN.md`
+records each phase and every departure from the canvas. The debug gallery opens from the "Momentic gallery"
+launcher on Android, or with the `-designGallery` launch argument on iOS.
 
 ## Conventions
 
@@ -82,6 +93,13 @@ shared/src/androidMain, iosMain   HTTP engines, build info, image processor, lin
 - Publishing: the purchase is recorded as pending **before** the call and retried with the same transaction; it is
   cleared only on success or a refusal no retry can fix. Never charge twice.
 - New logic gets a commonTest fixture; the suites are the acceptance criteria.
+- UI: every screen is a stateless `XScreen(state, intents…)` plus an `XRoute` that binds the view model; a new
+  state goes into the gallery's Screens section too. Copy lives in `composeResources/values/strings.xml` (plurals
+  for counts); legal links and the support address come from `config.links`. Snackbars go through the shell's
+  `Messenger` (`MessageEffect`); a sheet shows its own notes inside it, where a snackbar would be hidden.
+- Text that's a code or an address uses `TextStyle.literal()` — Plus Jakarta Sans otherwise turns "3x9" into
+  "3×9". Chips and bars take `heightIn`, not `height`, so 200 % text grows them instead of clipping
+  (the gallery's "Text at 200 %" switch checks it without touching the phone's settings).
 
 ## Gotchas
 
@@ -90,5 +108,10 @@ shared/src/androidMain, iosMain   HTTP engines, build info, image processor, lin
   `iosApp/Configuration/Config.xcconfig`). Kotlin/Native warns the `macos_x64` host is deprecated.
 - `runTest` + the production client's `HttpTimeout`: virtual time fires the timeout at once — run client calls on
   a real dispatcher (see `BuildHeadersTest.runClientTest`).
-- Not built yet: the real UI, the platform Google sign-in (needs the backend's web OAuth client id), and the
-  RevenueCat `StoreBilling` (needs public SDK keys and the Swift package in Xcode).
+- Not built yet: the platform Google sign-in (needs the backend's web OAuth client id; `rememberGoogleSignIn()`
+  answers "unavailable" until then) and the RevenueCat `StoreBilling` (needs public SDK keys and the Swift
+  package in Xcode) — so publishing can't complete in this build.
+- The editor **autosaves**: typing into a form creates a draft on the backend after 1.5 s. On the live backend
+  that's real data — check flows that write through the gallery's Screens samples instead.
+- Only `greeting_open_letter` has a page on the web so far; the other templates' live examples show the
+  renderer's "not available" page, and five templates' art 404s (the occasion tint shows instead).

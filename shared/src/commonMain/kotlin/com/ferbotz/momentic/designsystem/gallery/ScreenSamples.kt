@@ -9,12 +9,16 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
 import com.ferbotz.momentic.data.model.Attendance
 import com.ferbotz.momentic.data.model.Category
 import com.ferbotz.momentic.data.model.Creation
@@ -34,6 +38,7 @@ import com.ferbotz.momentic.data.repository.PublishKind
 import com.ferbotz.momentic.designsystem.components.ConfirmDialog
 import com.ferbotz.momentic.designsystem.components.MomenticBottomSheet
 import com.ferbotz.momentic.designsystem.components.SecondaryButton
+import com.ferbotz.momentic.designsystem.fields.ToggleRow
 import com.ferbotz.momentic.designsystem.icons.MomenticIcons
 import com.ferbotz.momentic.feature.account.SignInContent
 import com.ferbotz.momentic.feature.editor.EditorScreen
@@ -67,6 +72,7 @@ import com.ferbotz.momentic.presentation.publish.perDayPrice
 import com.ferbotz.momentic.presentation.template.TemplateDetailUiState
 import com.ferbotz.momentic.theme.Momentic
 import com.ferbotz.momentic.theme.MomenticSpacing
+import com.ferbotz.momentic.theme.MomenticTheme
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
@@ -83,12 +89,15 @@ internal class ScreenSample(val group: String, val name: String, val content: @C
 /**
  * The app's screens drawn from made-up states — the ones the live backend can't show on demand
  * (offline, loading, a failure) as well as the everyday ones. Each opens full screen; Back closes it.
+ * "Text at 200 %" opens them with the largest system text, without touching the phone's settings.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ScreenSamples() {
     var open by remember { mutableStateOf<ScreenSample?>(null) }
+    var largeText by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(MomenticSpacing.sm)) {
+        ToggleRow(checked = largeText, onCheckedChange = { largeText = it }, label = "Text at 200 %")
         screenSamples.groupBy { it.group }.forEach { (group, samples) ->
             Text(group, style = Momentic.type.label, color = Momentic.colors.ink)
             FlowRow(
@@ -101,8 +110,11 @@ internal fun ScreenSamples() {
     }
     open?.let { sample ->
         FullScreenWindow(onDismissRequest = { open = null }) {
-            Box(Modifier.fillMaxSize().background(Momentic.colors.background)) {
-                sample.content { open = null }
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, if (largeText) 2f else density.fontScale)) {
+                Box(Modifier.fillMaxSize().background(Momentic.colors.background)) {
+                    sample.content { open = null }
+                }
             }
         }
     }
@@ -449,3 +461,52 @@ private val screenSamples: List<ScreenSample> = listOf(
         )
     },
 )
+
+// Android Studio previews of the main screens, from the same made-up states as the gallery.
+
+@Composable
+private fun PreviewFrame(content: @Composable () -> Unit) = MomenticTheme { Box(Modifier.background(Momentic.colors.background)) { content() } }
+
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun ExplorePreview() = PreviewFrame { ExploreScreen(FeedUiState(sections = sampleFeed, isLoading = false), null, {}, {}, {}, {}) }
+
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun TemplatePreview() = PreviewFrame {
+    TemplateScreen(TemplateDetailUiState(GalleryTemplates.wedding, isLoading = false), onBack = {}, onLiveExample = {}, onMakeItYours = {}, onRetry = {})
+}
+
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun PaywallPreview() = PreviewFrame { PaywallScreen(samplePaywall, {}, {}, {}, {}, {}, {}, {}, {}) }
+
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun LivePreview() = PreviewFrame {
+    PublishedScreen(sampleLive, OpenGraph("A question for Divya", "Tap to open", null), "love", false, null, {}, {}, {}, {}, {})
+}
+
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun MomentsPreview() = PreviewFrame { MomentsScreen(sampleMoments, MomentsTab.Live, 20, {}, {}, {}, {}, {}, {}, {}) }
+
+@Preview(widthDp = 390, heightDp = 1200)
+@Composable
+private fun MomentPreview() = PreviewFrame { MomentDetailScreen(sampleDetail, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun RsvpsPreview() = PreviewFrame { RsvpsScreen(sampleRsvps, "Ananya weds Rohan", null, {}, {}, {}, {}, {}) }
+
+@Preview(widthDp = 390, heightDp = 844)
+@Composable
+private fun SettingsPreview() = PreviewFrame {
+    SettingsScreen(
+        state = AccountUiState(appVersion = "1.0 (1)"),
+        signIn = SignInUiState(),
+        googleAvailable = true,
+        onGoogle = {}, onPurchases = {}, onPrivacy = {}, onTerms = {}, onSupport = {}, onSignOut = {}, onDeleteAccount = {},
+    )
+}
+

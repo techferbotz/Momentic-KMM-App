@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -240,7 +241,8 @@ private fun ReplyCard(rsvp: Rsvp, onCall: (String) -> Unit) {
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(MomenticSpacing.sm), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clip(CircleShape).background(c.blush100), contentAlignment = Alignment.Center) {
-                Text(initials(rsvp.guestName), style = Momentic.type.label.copy(fontWeight = FontWeight.Bold), color = c.ink)
+                // Sized to the circle, not the text setting: the avatar doesn't grow with it.
+                Text(initials(rsvp.guestName), style = Momentic.type.label.copy(fontWeight = FontWeight.Bold, fontSize = with(LocalDensity.current) { 14.dp.toSp() }), color = c.ink)
             }
             Column(Modifier.weight(1f)) {
                 Text(rsvp.guestName, style = Momentic.type.body.copy(fontWeight = FontWeight.SemiBold), color = c.ink)
@@ -274,7 +276,7 @@ private fun AnswerChip(rsvp: Rsvp) {
         answer
     }
     Row(
-        Modifier.height(28.dp).clip(MomenticShapes.pill).background(fill).padding(start = 8.dp, end = 10.dp),
+        Modifier.heightIn(min = 28.dp).clip(MomenticShapes.pill).background(fill).padding(start = 8.dp, end = 10.dp, top = 2.dp, bottom = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

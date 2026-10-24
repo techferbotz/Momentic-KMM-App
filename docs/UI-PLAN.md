@@ -176,6 +176,23 @@ an upload, a purchase, a sign-in — and nothing on the iPhone yet.
 **6 · Polish and QA** *(M)* — motion, an accessibility pass (TalkBack, VoiceOver, 200 % text), strings and
 plurals, delete the placeholder UI and old theme, update `CLAUDE.md` and `VIEWMODELS.md`.
 
+*Phase 6 status (24 Oct):* the placeholder `ui/` package and the phase-3 stand-ins are gone (no dark theme was
+left to remove). **200 % text:** the gallery's Screens section has a "Text at 200 %" switch (it scales the
+opened screen only, so the shared emulator's settings stay as they are); every main screen was checked with
+it, and what broke was fixed at the source — chips, badges, the top bar and the segmented control now grow
+with their text instead of clipping it, the tab header puts its action under the title when they don't fit,
+a moment row's status and views wrap, "Most chosen" moves under the days, the share-target names shrink to
+fit, and avatars keep their initials to the circle. Sheets open in their own window, so the switch doesn't
+reach them — their text follows the real system setting. **Motion:** every loop and screen transition stands
+still under reduced motion (petals, skeletons, image fades, navigation); only short colour fades remain.
+**Screen readers:** a code review rather than a TalkBack or VoiceOver run, since switching either on would
+change the shared emulator's settings: headings on every screen title, one label for each icon-only button,
+radio and tab roles on the durations and moment tabs, check roles on the answer filters, live regions for the
+save note and "Making your link…", and status always written in words beside its colour. Copy is in
+`strings.xml`, with plurals for days, experiences, guests, replies and payments. `@Preview`s of the main
+screens come from the gallery's own sample states. Still open: TalkBack and VoiceOver on a device, and the
+iPhone run (`TEAM_ID`).
+
 ## View-model and data additions (small, additive, each tested)
 
 1. ~~`EditorViewModel` autosave: debounced `save()` after edits, and a save state for the top-bar indicator.~~

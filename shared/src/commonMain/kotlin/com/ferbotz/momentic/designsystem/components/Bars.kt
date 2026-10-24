@@ -5,12 +5,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -131,7 +135,7 @@ fun MomenticTopBar(
     val c = Momentic.colors
     Column(modifier.fillMaxWidth().background(background).windowInsetsPadding(windowInsets)) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(MomenticSizes.topBarHeight).padding(horizontal = MomenticSpacing.xs),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MomenticSizes.topBarHeight).padding(horizontal = MomenticSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (onBack != null) {
@@ -154,7 +158,11 @@ fun MomenticTopBar(
     }
 }
 
-/** A tab root's header: the serif display title, with an optional action (the "New moment" pill). */
+/**
+ * A tab root's header: the serif display title, with an optional action (the "New moment" pill) at the
+ * end — or under the title, when large text leaves no room beside it.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TabHeader(
     title: String,
@@ -162,15 +170,16 @@ fun TabHeader(
     windowInsets: WindowInsets = WindowInsets.statusBars,
     action: (@Composable () -> Unit)? = null,
 ) {
-    Row(
+    FlowRow(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(windowInsets)
             .padding(horizontal = MomenticSpacing.gutter, vertical = MomenticSpacing.xs),
-        horizontalArrangement = Arrangement.spacedBy(MomenticSpacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(MomenticSpacing.xs),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, style = Momentic.type.display, color = Momentic.colors.ink, modifier = Modifier.weight(1f))
+        Text(title, style = Momentic.type.display, color = Momentic.colors.ink, modifier = Modifier.semantics { heading() })
         action?.invoke()
     }
 }
@@ -189,7 +198,7 @@ fun StatusBarScrim(modifier: Modifier = Modifier, color: Color = Momentic.colors
 fun TopBarBadge(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .height(28.dp)
+            .heightIn(min = 28.dp)
             .clip(MomenticShapes.pill)
             .background(Momentic.colors.blush100)
             .padding(horizontal = MomenticSpacing.sm),

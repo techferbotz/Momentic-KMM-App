@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
@@ -26,6 +27,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -124,7 +126,7 @@ fun TierBadge(tier: Tier, modifier: Modifier = Modifier, label: String? = null) 
     }
     Row(
         modifier = modifier
-            .height(28.dp)
+            .heightIn(min = 28.dp)
             .clip(MomenticShapes.pill)
             .background(background)
             .then(if (tier == Tier.Simple) Modifier.border(1.dp, c.line, MomenticShapes.pill) else Modifier)
@@ -183,7 +185,7 @@ private fun ChipShell(
 ) {
     Row(
         modifier = modifier
-            .height(28.dp)
+            .heightIn(min = 28.dp)
             .clip(MomenticShapes.pill)
             .background(background)
             .padding(start = if (icon != null) 8.dp else 10.dp, end = 10.dp),
@@ -204,7 +206,7 @@ fun TagLabel(text: String, modifier: Modifier = Modifier) {
     val c = Momentic.colors
     Box(
         modifier = modifier
-            .height(32.dp)
+            .heightIn(min = 32.dp)
             .clip(MomenticShapes.pill)
             .background(c.blush100)
             .padding(horizontal = 12.dp),
@@ -240,7 +242,7 @@ fun SegmentedControl(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(MomenticSizes.minTouchTarget)
+                    .heightIn(min = MomenticSizes.minTouchTarget)
                     .then(if (selected) Modifier.momenticShadow(MomenticElevation.Rest, MomenticShapes.pill) else Modifier)
                     .clip(MomenticShapes.pill)
                     .background(background)
@@ -252,9 +254,10 @@ fun SegmentedControl(
                     text = option,
                     style = if (selected) Momentic.type.label.copy(fontWeight = FontWeight.Bold) else Momentic.type.label,
                     color = c.ink,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 )
             }
         }

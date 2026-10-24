@@ -258,7 +258,7 @@ fun ColourSwatches(
                 )
             }
             Swatch(
-                colour = if (isCustom) parseHex(normalized!!) else null,
+                colour = if (isCustom) parseHex(normalized) else null,
                 name = stringResource(Res.string.colour_custom),
                 selected = isCustom || editingCustom,
                 hasError = error != null,

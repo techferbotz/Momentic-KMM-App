@@ -81,7 +81,7 @@ fun MomenticTextField(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val over = maxLength != null && value.length > maxLength
-    val shownError = error ?: if (over) stringResource(Res.string.field_over_limit, maxLength!!) else null
+    val shownError = error ?: if (over) stringResource(Res.string.field_over_limit, maxLength) else null
     val tone = fieldTone(focused, shownError != null)
     val requiredLabel = stringResource(Res.string.field_required)
     val counter = maxLength?.let { stringResource(Res.string.field_counter, value.length, it) }
