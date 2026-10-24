@@ -20,11 +20,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import coil3.ImageLoader
-import coil3.compose.setSingletonImageLoaderFactory
-import coil3.network.ktor3.KtorNetworkFetcherFactory
-import coil3.request.crossfade
 import com.ferbotz.momentic.data.local.preferences.AppPreferences
+import com.ferbotz.momentic.designsystem.ProvideMomenticImageLoader
 import com.ferbotz.momentic.data.repository.DraftSessionRepository
 import com.ferbotz.momentic.data.util.resolveWebUrl
 import com.ferbotz.momentic.navigation.EditorRoute
@@ -55,12 +52,7 @@ private const val NAV_ANIM_MS = 320
 @Composable
 fun App() {
     MomenticTheme {
-        setSingletonImageLoaderFactory { context ->
-            ImageLoader.Builder(context)
-                .components { add(KtorNetworkFetcherFactory()) }
-                .crossfade(true)
-                .build()
-        }
+        ProvideMomenticImageLoader()
         DraftSessionBootstrap()
         RemoteConfigGate {
             MomenticNavHost()

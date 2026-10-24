@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ferbotz.momentic.data.model.DailyViews
+import com.ferbotz.momentic.designsystem.ProvideMomenticImageLoader
 import com.ferbotz.momentic.designsystem.components.ButtonStyle
 import com.ferbotz.momentic.designsystem.components.ConfirmDialog
 import com.ferbotz.momentic.designsystem.components.DestructiveButton
@@ -99,7 +100,10 @@ import kotlinx.datetime.plus
  */
 @Composable
 fun DesignGalleryApp() {
-    MomenticTheme { DesignGallery() }
+    MomenticTheme {
+        ProvideMomenticImageLoader()
+        DesignGallery()
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -130,12 +134,13 @@ fun DesignGallery() {
                 action = { PrimaryButton("New moment", onClick = {}, icon = MomenticIcons.Plus, compact = true) },
             )
             Text(
-                "Phase 0–1 · tokens and components",
+                "Tokens, components and the field kit",
                 style = Momentic.type.bodySmall,
                 color = c.inkSoft,
                 modifier = Modifier.padding(horizontal = MomenticSpacing.gutter),
             )
 
+            Section("Field kit") { FieldKitDemo() }
             Section("Colour") { ColourSwatches() }
             Section("Occasion tints") { OccasionTints() }
             Section("Type") { TypeScale() }
@@ -331,12 +336,13 @@ private fun TypeScale() {
 @Composable
 private fun ButtonMatrix() {
     ButtonStyle.entries.forEach { style ->
-        val icon = if (style == ButtonStyle.Destructive) MomenticIcons.Trash else null
+        val icon = if (style == ButtonStyle.Destructive || style == ButtonStyle.QuietDestructive) MomenticIcons.Trash else null
         val label = when (style) {
             ButtonStyle.Primary -> "Make it yours"
             ButtonStyle.Secondary -> "See a live example"
             ButtonStyle.Quiet -> "Show QR code"
             ButtonStyle.Destructive -> "Delete my account"
+            ButtonStyle.QuietDestructive -> "Remove this moment"
         }
         Text(style.name, style = Momentic.type.captionStrong, color = Momentic.colors.inkSoft)
         MomenticButton(label, onClick = {}, style = style, icon = icon, modifier = Modifier.fillMaxWidth())

@@ -380,7 +380,8 @@ object FormEngine {
         FieldType.BOOLEAN -> "Choose one"
         FieldType.IMAGE -> "Add a photo"
         FieldType.UNKNOWN -> "Update Momentic to fill this in"
-        else -> "Required"
+        FieldType.NUMBER -> "Add a number to continue"
+        else -> "Fill this in to continue"
     }
 
     private fun rangeMessage(field: FieldDefinition): String = when {

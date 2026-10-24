@@ -86,6 +86,8 @@ kotlin {
             // Presentation layer — async image loading (template art, uploaded photos)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
+            // Presentation layer — drag to reorder photos and a group's entries
+            implementation(libs.reorderable)
         }
         iosMain.dependencies {
             // Data layer — iOS HTTP engine

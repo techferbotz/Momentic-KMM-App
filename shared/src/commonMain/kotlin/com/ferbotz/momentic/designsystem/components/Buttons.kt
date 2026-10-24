@@ -56,6 +56,9 @@ enum class ButtonStyle {
 
     /** Soft-red outline, red label, always with an icon and words. */
     Destructive,
+
+    /** Red label only, 48 tall, with an icon — "Remove this moment" under a sheet's main action. */
+    QuietDestructive,
 }
 
 /**
@@ -80,8 +83,9 @@ fun MomenticButton(
     val active = enabled && !loading
     val palette = buttonPalette(style, Momentic.colors, pressed = pressed && active, enabled = enabled)
     val scale by animateFloatAsState(if (pressed && active) 0.98f else 1f, MomenticMotion.quick(), label = "press")
+    val quiet = style == ButtonStyle.Quiet || style == ButtonStyle.QuietDestructive
     val height = when {
-        style == ButtonStyle.Quiet -> MomenticSizes.minTouchTarget
+        quiet -> MomenticSizes.minTouchTarget
         compact -> MomenticSizes.compactButtonHeight
         else -> MomenticSizes.buttonHeight
     }
@@ -113,7 +117,7 @@ fun MomenticButton(
             )
             .semantics { if (loading) stateDescription = loadingLabel }
             .heightIn(min = height)
-            .padding(horizontal = if (compact || style == ButtonStyle.Quiet) 16.dp else 24.dp, vertical = 8.dp),
+            .padding(horizontal = if (compact || quiet) 16.dp else 24.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -204,6 +208,11 @@ private fun buttonPalette(style: ButtonStyle, c: MomenticColors, pressed: Boolea
             !enabled -> ButtonPalette(Color.Transparent, c.inkSoft, c.line)
             pressed -> ButtonPalette(c.errorFill, c.error, c.error)
             else -> ButtonPalette(Color.Transparent, c.error, c.errorSoft)
+        }
+        ButtonStyle.QuietDestructive -> when {
+            !enabled -> ButtonPalette(Color.Transparent, c.inkSoft, null)
+            pressed -> ButtonPalette(c.errorFill, c.error, null)
+            else -> ButtonPalette(Color.Transparent, c.error, null)
         }
     }
 

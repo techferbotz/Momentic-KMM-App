@@ -144,10 +144,10 @@ class FormEngineTest {
         val values = FormEngine.initialValues(proposal.fields, data = null, newId = ::newId)
         val errors = FormEngine.validate(proposal.fields, values, requireComplete = true)
 
-        assertEquals("Required", errors[FieldPath("partnerName")])
+        assertEquals("Fill this in to continue", errors[FieldPath("partnerName")])
         assertEquals("Add at least 3 moments", errors[FieldPath("memories")])
         val firstEntry = (values["memories"] as FieldValue.Group).entries.first().id
-        assertEquals("Required", errors[FieldPath("memories", firstEntry, "title")])
+        assertEquals("Fill this in to continue", errors[FieldPath("memories", firstEntry, "title")])
         assertNull(errors[FieldPath("memories", firstEntry, "image")], "the photo is optional")
         assertNull(errors[FieldPath("question")], "the question has its default")
         assertNull(errors[FieldPath("closingNote")])

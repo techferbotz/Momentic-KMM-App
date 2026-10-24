@@ -44,4 +44,84 @@
     <string name="chart_today">Today</string>
     <string name="chart_tooltip">%1$s · %2$s</string>
     <string name="chart_summary">Views per day for the last %1$d days. Most in a day: %2$d. Today: %3$d.</string>
+
+    <!-- Field kit: labels, helpers and counters shared by every input -->
+    <string name="field_required">required</string>
+    <string name="field_optional">Optional</string>
+    <string name="field_helper_optional">%1$s · optional</string>
+    <string name="field_counter">%1$d / %2$d</string>
+    <string name="field_over_limit">Keep it to %1$d characters</string>
+    <string name="field_example">e.g. %1$s</string>
+    <string name="field_unsupported">Update Momentic to fill in “%1$s” — this version can’t edit it yet.</string>
+    <string name="field_done">Done</string>
+    <string name="field_cancel">Cancel</string>
+    <string name="field_clear">Clear</string>
+
+    <!-- Number -->
+    <string name="number_less">One less</string>
+    <string name="number_more">One more</string>
+    <string name="number_between">Between %1$s and %2$s</string>
+    <string name="number_at_least">%1$s or more</string>
+    <string name="number_at_most">%1$s or less</string>
+
+    <!-- Date and time -->
+    <string name="date_choose">Choose a date</string>
+    <string name="date_part">Date</string>
+    <string name="time_part">Time</string>
+    <string name="time_choose">Choose a time</string>
+    <string name="time_next">Now choose a time</string>
+    <string name="time_missing">Add a time too</string>
+    <string name="date_missing">Add a date too</string>
+
+    <!-- Colour -->
+    <string name="colour_custom">Custom</string>
+    <string name="colour_hex">Colour code</string>
+    <string name="colour_hex_hint">Six characters after #, like #e8a0b4</string>
+    <string name="colour_blush">Blush</string>
+    <string name="colour_rose">Rose</string>
+    <string name="colour_gold">Gold</string>
+    <string name="colour_sage">Sage</string>
+    <string name="colour_sky">Sky</string>
+    <string name="colour_lavender">Lavender</string>
+    <string name="colour_midnight">Midnight</string>
+    <string name="colour_pick_one">Pick one</string>
+
+    <!-- Place -->
+    <string name="place_placeholder">Address or a well-known landmark</string>
+
+    <!-- Photos -->
+    <string name="photo_add">Add photo</string>
+    <string name="photo_add_short">Add</string>
+    <string name="photo_add_more">Add photos</string>
+    <string name="photo_change">Change</string>
+    <string name="photo_change_long">Change photo</string>
+    <string name="photo_remove">Remove photo</string>
+    <string name="photo_remove_numbered">Remove photo %1$d</string>
+    <string name="photo_numbered">Photo %1$d</string>
+    <string name="photo_uploaded">Uploaded</string>
+    <string name="photo_uploading">Uploading… you can keep typing</string>
+    <string name="photo_uploading_short">Uploading photo…</string>
+    <string name="photo_failed">Couldn’t upload —</string>
+    <string name="photo_try_again">Try again</string>
+    <string name="photo_choose_another">Choose another</string>
+    <string name="photo_crop_hint">%1$s · you’ll crop it next</string>
+    <string name="photo_cropped">Cropped to %1$s</string>
+    <string name="photos_count">%1$d of %2$d</string>
+    <string name="photos_hint">Up to %1$d · long-press to reorder</string>
+    <string name="photos_hint_no_limit">Long-press to reorder</string>
+
+    <!-- Repeating groups ("Your moments"): %1$s is the entry's name, e.g. "a moment", "moment", "moments" -->
+    <string name="group_add">Add %1$s</string>
+    <string name="group_empty">No %1$s yet</string>
+    <string name="group_edit">Edit %1$s</string>
+    <string name="group_new">New %1$s</string>
+    <string name="group_remove">Remove this %1$s</string>
+    <string name="group_save">Save</string>
+    <string name="group_position">%1$d of %2$d · %3$s</string>
+    <string name="group_untitled">%1$s %2$d</string>
+    <string name="group_tap_to_fill">Tap to fill in</string>
+    <string name="group_needs_attention">A few things to finish here</string>
+    <string name="group_hold_to_reorder">Hold the handle to reorder.</string>
+    <string name="group_reorder">Reorder %1$s</string>
+    <string name="group_edit_named">Edit %1$s</string>
 </resources>

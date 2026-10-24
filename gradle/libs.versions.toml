@@ -28,6 +28,8 @@ coil = "3.5.0"
 # Custom Tabs for template previews and the legal pages (HOA protocol 12 §3).
 androidxBrowser = "1.8.0"
 androidxExifinterface = "1.4.2"
+# Drag to reorder photos and a group's entries (KMP).
+reorderable = "3.1.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -72,6 +74,8 @@ coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.re
 # Presentation layer — in-app browser (Android Custom Tabs) and photo orientation (Android)
 androidx-browser = { module = "androidx.browser:browser", version.ref = "androidxBrowser" }
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidxExifinterface" }
+# Presentation layer — long-press / handle drag to reorder (KMP)
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

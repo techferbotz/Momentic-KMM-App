@@ -100,6 +100,16 @@ date-time, colour swatches, choice chips, location, photo, photo list, group lis
 that walks `template.fields` and binds to `EditorUiState` (`valueOf` / `errorFor` / `exampleFor`). Each field
 has empty / filled / focus / error states. Exit: matches the *Field kit* board.
 
+*Phase 2 status (24 Oct):* inputs in `designsystem/fields/`; `feature/editor/TemplateForm` walks the fields
+and talks to the screen through `FormActions` (the editor's intents, plus `pickPhotos` for the picker the
+screen owns). A group's entries open in a sheet; a blank entry added and closed is let go. Drag to reorder uses
+Reorderable 3.1.0 (long-press on photos, the handle on group cards). Checked on the emulator against the real
+Question, Invitation and Surprise contracts and an every-type sample in the gallery. Where it departs from the
+canvas: the place field is the address only (no map search — decided earlier); colour fields offer seven
+app-side presets and a colour code, because the field contract carries no options; the number stepper can be
+typed into as well; "Required" became "Fill this in to continue" / "Add a number to continue" in
+`FormEngine`, so every error says what to do.
+
 **3 · Navigation shell** *(S)* — routes for the table above, a tab scaffold, the gate, Welcome, a snackbar
 host for every `message`, event collection per route. Exit: every route reachable with stub screens.
 
