@@ -1,8 +1,5 @@
 package com.ferbotz.momentic.feature.editor
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -12,17 +9,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ferbotz.momentic.designsystem.components.MessageTone
-import com.ferbotz.momentic.designsystem.components.PrimaryButton
-import com.ferbotz.momentic.designsystem.components.SecondaryButton
 import com.ferbotz.momentic.feature.editor.crop.CropFlow
 import com.ferbotz.momentic.feature.editor.crop.CropSession
 import com.ferbotz.momentic.feature.shell.LocalMessenger
 import com.ferbotz.momentic.feature.shell.MessageEffect
-import com.ferbotz.momentic.feature.shell.StandInScreen
-import com.ferbotz.momentic.feature.shell.StandInStatus
+import com.ferbotz.momentic.platform.SystemBack
 import com.ferbotz.momentic.platform.rememberPhotoPicker
 import com.ferbotz.momentic.presentation.di.koinViewModel
 import com.ferbotz.momentic.presentation.editor.EditorEvent
@@ -30,12 +23,12 @@ import com.ferbotz.momentic.presentation.editor.EditorViewModel
 import com.ferbotz.momentic.presentation.editor.FieldPath
 import com.ferbotz.momentic.presentation.editor.FieldValue
 import com.ferbotz.momentic.presentation.editor.definitionAt
-import com.ferbotz.momentic.theme.MomenticSpacing
 import org.koin.core.parameter.parametersOf
 
 /**
- * The form for one template — a new creation, or [creationId]'s draft. Preview opens the draft on the
- * web; Continue goes to publishing once everything required is there; a deleted draft closes the form.
+ * The form for one template — a new creation, or [creationId]'s draft. It saves itself as you go; Back
+ * (the bar's or the system's) saves what's left and closes. Preview opens the draft on the web once
+ * everything required is there; publishing goes on from there.
  */
 @Composable
 fun EditorRoute(
@@ -81,16 +74,17 @@ fun EditorRoute(
         }
     }
 
-    StandInScreen(title = state.template?.name.orEmpty(), onBack = onClose) {
-        StandInStatus(state.isLoading, state.loadError, viewModel::retryLoad)
-        if (state.template != null) {
-            TemplateForm(state, actions)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MomenticSpacing.xs)) {
-                SecondaryButton("Preview", onClick = viewModel::preview, loading = state.isOpeningPreview, modifier = Modifier.weight(1f))
-                PrimaryButton("Continue", onClick = viewModel::continueToPublish, loading = state.isSaving, modifier = Modifier.weight(1f))
-            }
-        }
-    }
+    // The system's Back saves first too; the form closes when the view model says so.
+    SystemBack(enabled = cropping == null) { viewModel.close() }
+    EditorScreen(
+        state = state,
+        actions = actions,
+        onBack = viewModel::close,
+        onPreview = viewModel::preview,
+        onRetry = viewModel::retryLoad,
+        onKeepEditing = viewModel::keepEditing,
+        onLeaveWithoutSaving = viewModel::leaveWithoutSaving,
+    )
 
     cropping?.let { (path, session) ->
         CropFlow(

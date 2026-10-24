@@ -4,12 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ferbotz.momentic.data.model.Creation
 import com.ferbotz.momentic.data.model.CreationStats
+import com.ferbotz.momentic.data.model.OpenGraph
 import com.ferbotz.momentic.data.model.TemplateDetail
 import com.ferbotz.momentic.data.repository.CatalogueRepository
 import com.ferbotz.momentic.data.repository.CreationChange
 import com.ferbotz.momentic.data.repository.CreationEvents
 import com.ferbotz.momentic.data.repository.CreationRepository
 import com.ferbotz.momentic.data.repository.RemoteConfigRepository
+import com.ferbotz.momentic.data.repository.RenderRepository
 import com.ferbotz.momentic.data.result.AppResult
 import com.ferbotz.momentic.presentation.util.EventChannel
 import com.ferbotz.momentic.presentation.util.toUserMessage
@@ -27,6 +29,8 @@ import kotlinx.coroutines.launch
  *   remote config's `features.stats` is on ([showStats]).
  * @param canPublish a draft, with publishing switched on.
  * @param canRenew published (live or ended), with renewal switched on.
+ * @param linkPreview how the live link previews in a chat — the title and image the page sends to
+ *   WhatsApp and the rest (the render endpoint's `og`); null for a draft, or until it has loaded.
  */
 data class MomentDetailUiState(
     val isLoading: Boolean = true,
@@ -39,6 +43,7 @@ data class MomentDetailUiState(
     val showStats: Boolean = false,
     val canPublish: Boolean = false,
     val canRenew: Boolean = false,
+    val linkPreview: OpenGraph? = null,
     val isOpening: Boolean = false,
     val isDeleting: Boolean = false,
     val message: String? = null,
@@ -66,6 +71,7 @@ class MomentDetailViewModel(
     private val creationId: String,
     private val creations: CreationRepository,
     private val catalogue: CatalogueRepository,
+    private val render: RenderRepository,
     private val remoteConfig: RemoteConfigRepository,
     events: CreationEvents,
 ) : ViewModel() {
@@ -169,6 +175,13 @@ class MomentDetailViewModel(
             }
         }
         if (showStats) loadStats()
+        val shareCode = creation.shareCode
+        if (creation.isPublished && shareCode != null && _uiState.value.linkPreview == null) {
+            // A read of the public page: the view count only moves on its own POST, never on this.
+            viewModelScope.launch {
+                render.render(shareCode).getOrNull()?.og?.let { og -> _uiState.update { it.copy(linkPreview = og) } }
+            }
+        }
     }
 
     private fun loadStats() {

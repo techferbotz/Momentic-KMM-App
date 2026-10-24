@@ -81,9 +81,9 @@ data class PublishedRoute(val creationId: String)
 @Serializable
 data class MomentRoute(val creationId: String)
 
-/** The guests' replies to a moment that collects RSVPs. */
+/** The guests' replies to a moment that collects RSVPs; [momentTitle] goes under the bar. */
 @Serializable
-data class RsvpsRoute(val creationId: String)
+data class RsvpsRoute(val creationId: String, val momentTitle: String? = null)
 
 /** What the account has bought. */
 @Serializable

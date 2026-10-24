@@ -151,22 +151,50 @@ web page today, so the other live examples show the renderer's "not available" p
 **5 · Screens, flow by flow** *(L)* — Explore → Create → Publish → My Moments → Settings, each screen with its
 loading, empty, error and success states from the canvas.
 
+*Phase 5 status (24 Oct):* every stand-in is replaced; each screen is a stateless `XScreen` in `feature/…` and
+its `XRoute` binds the view model. **Explore** (occasions, featured, one carousel per occasion, pull to
+refresh; loading, failed and an offline state that looks again every 15 s), **Category** (tinted header and
+grid) and **Template** (preview pager, "What you'll add" from the fields, the RSVP card; a bar with the name
+takes over once the art scrolls away). **Personalise** saves itself after a 1.5 s pause (the bar says Saving /
+Saved / Offline / Not saved) and Back saves first — or asks, when it can't; Preview now needs every required
+field, as the form's own note says. **Sign in** is the designed sheet, saying plainly that this build has no
+Google sign-in yet. **Choose how long** (durations with "Most chosen" on the week, what each comes to a day
+when the store says, "live until", the legal links), **Making your link…**, **We couldn't make your link
+yet** (Try again finishes the same purchase; Contact support), **Your moment is live** (the WhatsApp preview
+from the page's own `og`, the link to copy, WhatsApp / Instagram / Messages / More, the QR code, petals) and
+**Add more time** as a sheet over the moment. **My Moments** (three tabs, the finishing-a-payment banner,
+paging, per-tab empty states), the **moment** (live: link, views chart, time left, guest replies, Extend /
+Edit / Preview; ended: Bring it back; draft: Publish / Edit / Preview; Delete with its dialog), **Guest
+replies** (filter by answer, call a guest), **Settings** (signed in or out — sign-in sits in the card as
+drawn), **Purchases** (a holding state until the contract has the list) and **Delete account** with its
+confirmation. The debug gallery's new *Screens* section draws every screen from made-up states — the only way
+to see publishing, a live moment or the guest list without creating data on the live backend. Checked on the
+emulator: all of those samples, and Explore → Category → Template → live example → Personalise (opened and
+left without editing) → My Moments → Settings against the live API. Not run: anything that writes — a draft,
+an upload, a purchase, a sign-in — and nothing on the iPhone yet.
+
 **6 · Polish and QA** *(M)* — motion, an accessibility pass (TalkBack, VoiceOver, 200 % text), strings and
 plurals, delete the placeholder UI and old theme, update `CLAUDE.md` and `VIEWMODELS.md`.
 
 ## View-model and data additions (small, additive, each tested)
 
-1. `EditorViewModel` autosave: debounced `save()` after edits, and a save state for the top-bar indicator.
+1. ~~`EditorViewModel` autosave: debounced `save()` after edits, and a save state for the top-bar indicator.~~
+   Done in phase 5 (`autosave`, `close()`), with the Back that saves first.
 2. ~~`ImageProcessor.prepare` / `addPhotos`: an optional crop rectangle from the crop screen (centre crop stays
    the default).~~ Done in phase 4 as `PhotoFraming` and `addFramedPhotos`. Optional: upload progress on
    `PhotoSlot.Uploading`.
 3. ~~`AppPreferences.hasSeenWelcome`.~~ Done in phase 3.
 4. ~~A "send preview link" intent on the editor that emits `Share(url)`.~~ Not needed: the Preview screen already
    has the link and shares it itself.
-5. Surface `limits.maxDrafts` / `maxImages` as the "up to 20 drafts" and "60 photos" messages.
-6. `StoreProduct`: amount + currency next to `formattedPrice`, for "₹86 a day".
-7. Interim titles and covers until the backend sends them: title = the template name plus the first short
-   text value; cover = the template's art.
+5. ~~Surface `limits.maxDrafts` / `maxImages` as the "up to 20 drafts" and "60 photos" messages.~~ The drafts
+   tab reads `limits.maxDrafts` from remote config; the server's own messages cover the photo limit.
+6. ~~`StoreProduct`: amount + currency next to `formattedPrice`, for "₹86 a day".~~ Done as
+   `StoreProduct.amountMicros` → `DurationOption.perDay`, written in the store's own format (`perDayPrice`).
+7. ~~Interim titles and covers until the backend sends them.~~ Done: a moment is named by its first short line
+   of text ("Divya") with the template under it — or, once live, by its page's `og.title`; the cover is the
+   template's art.
+8. Added in phase 5: `FeedUiState.isOffline`; the paywall's `template` and `confirmError`;
+   `MomentDetailUiState.linkPreview`; `LinkOpener.call`; `koinViewModel(key)` for a sheet that starts afresh.
 
 ## Contract requests (protocol 01 — `app/REQUESTS.md`, APP-001 onwards)
 
@@ -174,6 +202,8 @@ plurals, delete the placeholder UI and old theme, update `CLAUDE.md` and `VIEWMO
 - A **cover thumbnail URL** on creations, beside `coverImageId`.
 - The **`GET /me/purchases`** response shape, for the Purchases screen.
 - Optional: a **featured** template in the feed and a **recommended** duration ("Most chosen").
+- Optional: a one-line **description per category** (the Category header uses app-side lines for the six it
+  knows), and **display labels for tags** ("RSVP" arrives as `rsvp`).
 
 ## Decisions
 

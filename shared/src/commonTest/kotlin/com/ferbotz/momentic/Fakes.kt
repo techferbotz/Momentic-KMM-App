@@ -70,14 +70,19 @@ class FakeCreations : CreationRepository {
     val deleted = mutableListOf<String>()
     var stored: Creation? = null
 
+    /** While set, creates and updates fail with it (and aren't recorded). */
+    var failWith: AppError? = null
+
     private val unavailable = AppResult.Failure(AppError.Api(503, ErrorCode.INTERNAL, null))
 
     override suspend fun create(templateId: String, data: JsonObject, coverImageId: String?): AppResult<Creation> {
+        failWith?.let { return AppResult.Failure(it) }
         created += data to coverImageId
         return AppResult.Success(creation("c${created.size}", templateId, data).also { stored = it })
     }
 
     override suspend fun update(creationId: String, data: JsonObject, coverImageId: String?): AppResult<Creation> {
+        failWith?.let { return AppResult.Failure(it) }
         updated += data to coverImageId
         return AppResult.Success(creation(creationId, stored?.templateId.orEmpty(), data).also { stored = it })
     }
@@ -142,8 +147,12 @@ class FakeProcessor : ImageProcessor {
     }
 }
 
-/** No sample page and no draft render: the editor must cope without either. */
-class FakeRender : RenderRepository {
-    override suspend fun render(code: String): AppResult<RenderedPage> = AppResult.Failure(AppError.Network())
+/** No sample page and no draft render, unless [pages] has one: the editor must cope without either. */
+class FakeRender(private val pages: Map<String, RenderedPage> = emptyMap()) : RenderRepository {
+    val rendered = mutableListOf<String>()
+    override suspend fun render(code: String): AppResult<RenderedPage> {
+        rendered += code
+        return pages[code]?.let { AppResult.Success(it) } ?: AppResult.Failure(AppError.Network())
+    }
     override suspend fun examplePage(previewCode: String): AppResult<RenderedPage> = AppResult.Failure(AppError.Network())
 }

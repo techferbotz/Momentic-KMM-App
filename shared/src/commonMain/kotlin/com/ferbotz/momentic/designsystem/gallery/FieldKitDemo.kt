@@ -21,12 +21,6 @@ import androidx.compose.ui.unit.dp
 import com.ferbotz.momentic.data.mapper.toDomain
 import com.ferbotz.momentic.data.media.PickedPhoto
 import com.ferbotz.momentic.data.media.platformImageProcessor
-import com.ferbotz.momentic.data.result.AppResult
-import com.ferbotz.momentic.feature.editor.crop.CropFlow
-import com.ferbotz.momentic.feature.editor.crop.CropSession
-import com.ferbotz.momentic.platform.decodePhotoPreview
-import com.ferbotz.momentic.platform.rememberPhotoPicker
-import com.ferbotz.momentic.theme.Momentic
 import com.ferbotz.momentic.data.model.AspectRatio
 import com.ferbotz.momentic.data.model.ChoiceOption
 import com.ferbotz.momentic.data.model.FieldDefinition
@@ -35,11 +29,16 @@ import com.ferbotz.momentic.data.model.Pricing
 import com.ferbotz.momentic.data.model.TemplateDetail
 import com.ferbotz.momentic.data.network.appJson
 import com.ferbotz.momentic.data.network.dto.TemplateDetailDto
+import com.ferbotz.momentic.data.result.AppResult
 import com.ferbotz.momentic.designsystem.components.QuietButton
 import com.ferbotz.momentic.designsystem.components.SecondaryButton
 import com.ferbotz.momentic.designsystem.components.SegmentedControl
 import com.ferbotz.momentic.feature.editor.FormActions
 import com.ferbotz.momentic.feature.editor.TemplateForm
+import com.ferbotz.momentic.feature.editor.crop.CropFlow
+import com.ferbotz.momentic.feature.editor.crop.CropSession
+import com.ferbotz.momentic.platform.decodePhotoPreview
+import com.ferbotz.momentic.platform.rememberPhotoPicker
 import com.ferbotz.momentic.presentation.editor.EditorUiState
 import com.ferbotz.momentic.presentation.editor.FieldPath
 import com.ferbotz.momentic.presentation.editor.FieldValue
@@ -48,6 +47,7 @@ import com.ferbotz.momentic.presentation.editor.PhotoSlot
 import com.ferbotz.momentic.presentation.editor.definitionAt
 import com.ferbotz.momentic.presentation.editor.valueAt
 import com.ferbotz.momentic.presentation.editor.withValueAt
+import com.ferbotz.momentic.theme.Momentic
 import com.ferbotz.momentic.theme.MomenticSpacing
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -119,7 +119,7 @@ internal fun FieldKitDemo() {
     }
 }
 
-private class GalleryForm(
+internal class GalleryForm(
     template: TemplateDetail,
     private val scope: CoroutineScope,
     private val onPick: (FieldPath, Int?) -> Unit,
@@ -270,7 +270,7 @@ private val EveryField = TemplateDetail(
 )
 
 /** Three real templates as momentic.ferbotz.com served them on 2026-10-23. */
-private object GalleryTemplates {
+internal object GalleryTemplates {
     private const val ORIGIN = "https://momentic.ferbotz.com"
 
     val proposal = parse(

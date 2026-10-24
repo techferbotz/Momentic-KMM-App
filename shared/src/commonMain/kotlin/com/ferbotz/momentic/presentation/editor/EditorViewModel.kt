@@ -18,6 +18,8 @@ import com.ferbotz.momentic.data.result.AppResult
 import com.ferbotz.momentic.data.result.ErrorCode
 import com.ferbotz.momentic.presentation.util.EventChannel
 import com.ferbotz.momentic.presentation.util.toUserMessage
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +43,9 @@ import kotlinx.serialization.json.contentOrNull
  * @param values what has been entered, by field key — read with [valueOf].
  * @param errors problems by input; set when a save or "Continue" is refused, cleared as inputs change.
  * @param examples sample values from the template's shopfront ("e.g. Divya"), by [FieldPath.exampleKey].
- * @param hasUnsavedChanges something changed since the last save (ask before leaving).
+ * @param hasUnsavedChanges something changed since the last save.
+ * @param autosave where the quiet save after each pause in editing is — the top bar's note.
+ * @param confirmLeave leaving couldn't save what changed: ask whether to leave without it.
  * @param message a one-off note for a snackbar; clear it with `messageShown()`.
  */
 data class EditorUiState(
@@ -55,6 +59,8 @@ data class EditorUiState(
     val isSaving: Boolean = false,
     val isOpeningPreview: Boolean = false,
     val hasUnsavedChanges: Boolean = false,
+    val autosave: AutosaveState = AutosaveState.Idle,
+    val confirmLeave: Boolean = false,
     val message: String? = null,
 ) {
     val fields: List<FieldDefinition> get() = template?.fields.orEmpty()
@@ -67,6 +73,30 @@ data class EditorUiState(
     fun errorFor(path: FieldPath): String? = errors[path]
 
     fun exampleFor(path: FieldPath): String? = examples[path.exampleKey]
+}
+
+/** The pause in editing after which the draft saves itself. */
+const val AUTOSAVE_DELAY_MS = 1_500L
+
+/** How long an autosave that couldn't reach the server waits before trying again on its own. */
+const val AUTOSAVE_RETRY_MS = 15_000L
+
+/** Where the editor's autosave is. */
+enum class AutosaveState {
+    /** Nothing to report yet: nothing has changed since the form opened. */
+    Idle,
+
+    /** Changes are waiting for a pause in editing, or being saved. */
+    Saving,
+
+    /** Everything on screen is saved in the draft. */
+    Saved,
+
+    /** The last save couldn't reach the server; the next change, or a little later, tries again. */
+    Offline,
+
+    /** Not saved: a value needs another look, or the server refused (a message said why). */
+    NotSaved,
 }
 
 /** The key [EditorUiState.examples] uses: `key`, or `groupKey.childKey` for a group's child. */
@@ -97,9 +127,12 @@ sealed interface EditorEvent {
  *
  * - **Photos upload as they're picked**, one at a time (uploads are limited to 20 an hour per IP),
  *   after being made upright, cropped to the field's aspect ratio and shrunk on the device.
- * - **Save** keeps a partial draft (only malformed values are refused). **Continue** requires every
- *   required field first, then saves and hands over to publishing. **Preview** saves and opens the
- *   draft on the web.
+ * - **Autosave**: a pause of [AUTOSAVE_DELAY_MS] in editing saves the draft quietly — the first one
+ *   creates it. Malformed values wait (they're pointed out on Preview); a refusal pauses autosave until
+ *   a save the person asked for works. **Back** ([close]) saves what's left first.
+ * - **Save** keeps a partial draft (only malformed values are refused). **Preview** and **Continue**
+ *   require every required field first, then save; Preview opens the draft on the web, Continue hands
+ *   over to publishing.
  * - A photo removed from the form is freed on the server (it counts towards the 60-photo limit): at
  *   once if no save ever used it, otherwise after the next save stops using it.
  */
@@ -136,6 +169,14 @@ class EditorViewModel(
     /** Photos removed from the form that the last save still used; freed after the next save. */
     private val releasedAfterSave = mutableSetOf<String>()
 
+    private var autosaveJob: Job? = null
+
+    /** Set when the server refused an autosave: no more until a save the person asked for works. */
+    private var autosavePaused = false
+
+    /** Back was pressed and the form is closing — a second press mustn't close twice. */
+    private var closing = false
+
     init {
         load()
     }
@@ -166,7 +207,9 @@ class EditorViewModel(
             }
             val values = FormEngine.initialValues(template.fields, data, ::newId, known)
             savedImageIds = if (data != null) FormEngine.imageIds(template.fields, values).toSet() else emptySet()
-            _uiState.update { it.copy(isLoading = false, template = template, values = values) }
+            _uiState.update {
+                it.copy(isLoading = false, template = template, values = values, autosave = if (creationId != null) AutosaveState.Saved else AutosaveState.Idle)
+            }
             loadExamples(template)
         }
     }
@@ -237,6 +280,7 @@ class EditorViewModel(
                 hasUnsavedChanges = true,
             )
         }
+        scheduleAutosave()
     }
 
     /**
@@ -340,18 +384,18 @@ class EditorViewModel(
     /** Saves the draft as it is; only malformed values (too long, out of range) stop it. */
     fun save() {
         viewModelScope.launch {
-            if (persist(requireComplete = false) != null) note("Draft saved")
+            if (persist(requireComplete = false) is SaveOutcome.Saved) note("Draft saved")
         }
     }
 
-    /** Saves, then opens the draft on the web in the in-app browser. */
+    /** Requires every required field (the form says so: "needed before you preview"), saves, then opens the draft on the web. */
     fun preview() {
         viewModelScope.launch {
             if (_uiState.value.uploadsInFlight > 0) return@launch note("Wait a moment — your photos are still uploading.")
             _uiState.update { it.copy(isOpeningPreview = true) }
-            val creationId = persist(requireComplete = false)
-            if (creationId != null) {
-                when (val link = creations.previewLink(creationId)) {
+            val saved = persist(requireComplete = true)
+            if (saved is SaveOutcome.Saved) {
+                when (val link = creations.previewLink(saved.creationId)) {
                     is AppResult.Success -> _events.send(EditorEvent.OpenPreview(link.data.url))
                     is AppResult.Failure -> note(link.error.toUserMessage())
                 }
@@ -363,13 +407,86 @@ class EditorViewModel(
     /** Requires every required field, saves, then hands the draft to publishing. */
     fun continueToPublish() {
         viewModelScope.launch {
-            val creationId = persist(requireComplete = true) ?: return@launch
-            _events.send(EditorEvent.ContinueToPublish(creationId))
+            val saved = persist(requireComplete = true) as? SaveOutcome.Saved ?: return@launch
+            _events.send(EditorEvent.ContinueToPublish(saved.creationId))
+        }
+    }
+
+    /**
+     * Back from the form: saves what changed since the last save, then closes. When that can't be
+     * saved (a value needs another look, no connection, a refusal) it asks first ([confirmLeave]).
+     */
+    fun close() {
+        if (closing) return
+        closing = true
+        autosaveJob?.cancel()
+        viewModelScope.launch {
+            val state = _uiState.value
+            if (state.template == null || !state.hasUnsavedChanges) return@launch _events.send(EditorEvent.Closed)
+            when (persist(requireComplete = false, quiet = true)) {
+                is SaveOutcome.Saved -> _events.send(EditorEvent.Closed)
+                SaveOutcome.Invalid -> {
+                    closing = false
+                    // Mark what needs another look, so "Keep editing" lands on it.
+                    _uiState.update { it.copy(errors = FormEngine.validate(it.fields, it.values, requireComplete = false), confirmLeave = true) }
+                }
+                is SaveOutcome.Failed -> {
+                    closing = false
+                    _uiState.update { it.copy(confirmLeave = true) }
+                }
+            }
+        }
+    }
+
+    /** "Keep editing" on the leave question. */
+    fun keepEditing() {
+        _uiState.update { it.copy(confirmLeave = false) }
+        scheduleAutosave()
+    }
+
+    /** "Leave without saving": what changed since the last save is let go — its new photos with it. */
+    fun leaveWithoutSaving() {
+        val state = _uiState.value
+        _uiState.update { it.copy(confirmLeave = false) }
+        FormEngine.imageIds(state.fields, state.values)
+            .filterNot { it in savedImageIds }
+            .forEach { id -> viewModelScope.launch { images.delete(id) } }
+        viewModelScope.launch { _events.send(EditorEvent.Closed) }
+    }
+
+    /** Every change: save quietly once editing pauses. */
+    private fun scheduleAutosave() {
+        if (closing || autosavePaused) return
+        autosaveJob?.cancel()
+        _uiState.update { it.copy(autosave = AutosaveState.Saving) }
+        autosaveJob = viewModelScope.launch {
+            delay(AUTOSAVE_DELAY_MS)
+            autosave()
+        }
+    }
+
+    private suspend fun autosave() {
+        if (!_uiState.value.hasUnsavedChanges) return
+        when (val outcome = persist(requireComplete = false, quiet = true)) {
+            is SaveOutcome.Saved, SaveOutcome.Invalid -> Unit
+            is SaveOutcome.Failed -> if (outcome.error is AppError.Network) {
+                // Offline: the next change tries again, and so does a pause without one.
+                autosaveJob = viewModelScope.launch {
+                    delay(AUTOSAVE_RETRY_MS)
+                    autosave()
+                }
+            } else {
+                autosavePaused = true
+                note(outcome.error.toUserMessage())
+            }
         }
     }
 
     /** Deletes the draft (or discards a never-saved form, freeing its photos), then closes. */
     fun delete() {
+        // A pending autosave mustn't bring the draft back.
+        autosaveJob?.cancel()
+        closing = true
         viewModelScope.launch {
             val state = _uiState.value
             val creationId = state.creationId
@@ -380,30 +497,50 @@ class EditorViewModel(
             }
             when (val result = creations.delete(creationId)) {
                 is AppResult.Success -> _events.send(EditorEvent.Closed)
-                is AppResult.Failure -> note(result.error.toUserMessage())
+                is AppResult.Failure -> {
+                    closing = false
+                    note(result.error.toUserMessage())
+                }
             }
         }
     }
 
+    /** How a save went. */
+    private sealed interface SaveOutcome {
+        data class Saved(val creationId: String) : SaveOutcome
+
+        /** Refused before sending: a value needs another look (or, before publishing, is missing). */
+        data object Invalid : SaveOutcome
+
+        data class Failed(val error: AppError) : SaveOutcome
+    }
+
     /**
-     * Validates, then creates or updates the draft. Returns its id, or null when it was refused (the
-     * errors or the failure are already in the state). Nothing is sent when the draft is saved and
-     * unchanged.
+     * Validates, then creates or updates the draft. Nothing is sent when the draft is saved and
+     * unchanged. A [quiet] save (autosave, leaving) marks no errors and leaves the failure to its caller;
+     * otherwise the errors and the failure are already in the state when it returns.
      */
-    private suspend fun persist(requireComplete: Boolean): String? = saveLock.withLock {
+    private suspend fun persist(requireComplete: Boolean, quiet: Boolean = false): SaveOutcome = saveLock.withLock {
         val state = _uiState.value
-        val template = state.template ?: return@withLock null
+        val template = state.template ?: return@withLock SaveOutcome.Invalid
         val errors = FormEngine.validate(template.fields, state.values, requireComplete)
         if (errors.isNotEmpty()) {
-            _uiState.update { it.copy(errors = errors) }
-            note(
-                if (requireComplete) "A few things still need filling in." else "A few things need another look.",
-            )
-            return@withLock null
+            if (quiet) {
+                _uiState.update { it.copy(autosave = AutosaveState.NotSaved) }
+            } else {
+                _uiState.update { it.copy(errors = errors, autosave = if (it.hasUnsavedChanges) AutosaveState.NotSaved else it.autosave) }
+                note(
+                    if (requireComplete) "A few things still need filling in." else "A few things need another look.",
+                )
+            }
+            return@withLock SaveOutcome.Invalid
         }
-        if (!state.hasUnsavedChanges && state.creationId != null) return@withLock state.creationId
+        if (!state.hasUnsavedChanges && state.creationId != null) {
+            if (!quiet) autosavePaused = false
+            return@withLock SaveOutcome.Saved(state.creationId)
+        }
 
-        _uiState.update { it.copy(isSaving = true, errors = emptyMap()) }
+        _uiState.update { it.copy(isSaving = true, errors = if (quiet) it.errors else emptyMap(), autosave = AutosaveState.Saving) }
         val data = FormEngine.toWireData(template.fields, state.values)
         val usedImages = FormEngine.imageIds(template.fields, state.values)
         val result = state.creationId
@@ -413,20 +550,24 @@ class EditorViewModel(
             is AppResult.Success -> {
                 savedImageIds = usedImages.toSet()
                 freeReleasedImages()
+                if (!quiet) autosavePaused = false
                 _uiState.update {
+                    // Values edited while the save was in flight are still unsaved.
+                    val stillUnsaved = it.values != state.values
                     it.copy(
                         isSaving = false,
                         creationId = result.data.id,
-                        // Values edited while the save was in flight are still unsaved.
-                        hasUnsavedChanges = it.values != state.values,
+                        hasUnsavedChanges = stillUnsaved,
+                        autosave = if (stillUnsaved) AutosaveState.Saving else AutosaveState.Saved,
                     )
                 }
-                result.data.id
+                SaveOutcome.Saved(result.data.id)
             }
             is AppResult.Failure -> {
-                _uiState.update { it.copy(isSaving = false) }
-                note(result.error.toUserMessage())
-                null
+                val offline = result.error is AppError.Network
+                _uiState.update { it.copy(isSaving = false, autosave = if (offline) AutosaveState.Offline else AutosaveState.NotSaved) }
+                if (!quiet) note(result.error.toUserMessage())
+                SaveOutcome.Failed(result.error)
             }
         }
     }
@@ -516,12 +657,14 @@ class EditorViewModel(
             }
             state.copy(values = state.values.withValueAt(path, next), errors = state.errors - path, hasUnsavedChanges = true)
         }
+        scheduleAutosave()
     }
 
     private fun setValue(path: FieldPath, value: FieldValue) {
         _uiState.update { state ->
             state.copy(values = state.values.withValueAt(path, value), errors = state.errors - path, hasUnsavedChanges = true)
         }
+        scheduleAutosave()
     }
 
     private fun note(message: String) {

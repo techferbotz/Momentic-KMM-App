@@ -1,6 +1,5 @@
 package com.ferbotz.momentic.feature.publish
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -8,34 +7,36 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ferbotz.momentic.data.repository.PublishKind
-import com.ferbotz.momentic.designsystem.components.InlineBanner
 import com.ferbotz.momentic.designsystem.components.MessageTone
-import com.ferbotz.momentic.designsystem.components.MomenticButton
-import com.ferbotz.momentic.designsystem.components.ButtonStyle
-import com.ferbotz.momentic.designsystem.components.PrimaryButton
-import com.ferbotz.momentic.designsystem.components.SecondaryButton
 import com.ferbotz.momentic.feature.account.SignInSheet
+import com.ferbotz.momentic.feature.shell.LocalMessenger
 import com.ferbotz.momentic.feature.shell.MessageEffect
-import com.ferbotz.momentic.feature.shell.StandInNote
-import com.ferbotz.momentic.feature.shell.StandInScreen
-import com.ferbotz.momentic.feature.shell.StandInStatus
+import com.ferbotz.momentic.platform.SystemBack
 import com.ferbotz.momentic.platform.rememberShareSheet
+import com.ferbotz.momentic.platform.rememberTextCopier
 import com.ferbotz.momentic.platform.shareText
+import com.ferbotz.momentic.presentation.config.LocalRemoteConfig
 import com.ferbotz.momentic.presentation.di.koinViewModel
+import com.ferbotz.momentic.presentation.links.rememberLinkOpener
 import com.ferbotz.momentic.presentation.moments.MomentDetailEvent
 import com.ferbotz.momentic.presentation.moments.MomentDetailViewModel
 import com.ferbotz.momentic.presentation.publish.PublishEvent
 import com.ferbotz.momentic.presentation.publish.PublishStage
 import com.ferbotz.momentic.presentation.publish.PublishViewModel
+import com.ferbotz.momentic.resources.Res
+import com.ferbotz.momentic.resources.live_copied
+import com.ferbotz.momentic.resources.notice_no_mail_app
+import com.ferbotz.momentic.resources.publishing_support_body
+import com.ferbotz.momentic.resources.publishing_support_subject
+import com.ferbotz.momentic.resources.share_line
+import org.jetbrains.compose.resources.stringResource
 import org.koin.core.parameter.parametersOf
 
 /**
  * Choose how long, then pay and publish — or, for a published moment, renew it (same link, more days).
  * Not signed in, it asks first ([SignInSheet]) and carries on with the purchase. A draft that's missing
- * something goes back to its form.
+ * something goes back to its form. While the server confirms, Back waits.
  */
 @Composable
 fun PublishRoute(
@@ -49,6 +50,9 @@ fun PublishRoute(
     MessageEffect(state.message, viewModel::messageShown)
     var signingIn by rememberSaveable { mutableStateOf(false) }
     val share = rememberShareSheet()
+    val links = rememberLinkOpener()
+    val messenger = LocalMessenger.current
+    val config = LocalRemoteConfig.current
     val edit by rememberUpdatedState(onEditDraft)
     val published by rememberUpdatedState(onPublished)
     LaunchedEffect(viewModel) {
@@ -61,34 +65,24 @@ fun PublishRoute(
             }
         }
     }
+    SystemBack(enabled = state.stage == PublishStage.CONFIRMING) {}
 
-    StandInScreen(title = if (state.kind == PublishKind.RENEW) "Add more days" else "Choose how long", onBack = onBack) {
-        StandInStatus(state.isLoading, state.loadError, viewModel::retryLoad)
-        if (!state.isLoading && state.loadError == null) {
-            StandInNote("${state.tierLabel} · ${state.displayPerDay}")
-            if (!state.isAvailable) InlineBanner(state.unavailableReason ?: "Publishing isn't available right now.", MessageTone.Warning)
-            if (state.missingFields.isNotEmpty()) {
-                InlineBanner("Still to fill in: " + state.missingFields.joinToString(), MessageTone.Info)
-                SecondaryButton("Finish the form", onClick = viewModel::editDraft, modifier = Modifier.fillMaxWidth())
-            }
-            state.options.forEach { option ->
-                MomenticButton(
-                    text = "${option.days} days" + (option.price?.let { " · $it" } ?: ""),
-                    onClick = { viewModel.select(option.productId) },
-                    style = if (option.productId == state.selectedProductId) ButtonStyle.Primary else ButtonStyle.Secondary,
-                    modifier = Modifier.fillMaxWidth(),
-                    compact = true,
-                )
-            }
-            PrimaryButton(
-                text = if (state.pendingPurchase != null) "Finish publishing" else "Publish",
-                onClick = viewModel::purchase,
-                enabled = state.canPurchase || state.pendingPurchase != null,
-                loading = state.stage == PublishStage.PURCHASING || state.stage == PublishStage.CONFIRMING,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
+    val supportSubject = stringResource(Res.string.publishing_support_subject)
+    val supportBody = stringResource(Res.string.publishing_support_body, creationId)
+    val noMailApp = stringResource(Res.string.notice_no_mail_app, config.links.supportEmail)
+    PaywallScreen(
+        state = state,
+        onBack = onBack,
+        onSelect = viewModel::select,
+        onPurchase = viewModel::purchase,
+        onEditDraft = viewModel::editDraft,
+        onTerms = { links.openPage(config.links.terms) },
+        onPrivacy = { links.openPage(config.links.privacyPolicy) },
+        onContactSupport = {
+            links.composeEmail(config.links.supportEmail, supportSubject, supportBody, onUnavailable = { messenger.show(noMailApp) })
+        },
+        onRetryLoad = viewModel::retryLoad,
+    )
     if (signingIn) {
         SignInSheet(
             onDismiss = { signingIn = false },
@@ -110,7 +104,10 @@ fun PublishedRoute(creationId: String, onDone: () -> Unit, onOpenPage: (url: Str
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     MessageEffect(state.message, viewModel::messageShown)
     val share = rememberShareSheet()
+    val copier = rememberTextCopier()
+    val messenger = LocalMessenger.current
     val open by rememberUpdatedState(onOpenPage)
+    var showQr by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
@@ -120,13 +117,29 @@ fun PublishedRoute(creationId: String, onDone: () -> Unit, onOpenPage: (url: Str
             }
         }
     }
-    StandInScreen(title = "Your moment is live", onBack = onDone) {
-        StandInStatus(state.isLoading, state.error, viewModel::refresh)
-        state.creation?.shareUrl?.let { url ->
-            StandInNote(url)
-            PrimaryButton("Share the link", onClick = viewModel::share, modifier = Modifier.fillMaxWidth())
-            SecondaryButton("Open your moment", onClick = viewModel::open, loading = state.isOpening, modifier = Modifier.fillMaxWidth())
-        }
-        SecondaryButton("Done", onClick = onDone, modifier = Modifier.fillMaxWidth())
+    val shareLine = stringResource(Res.string.share_line)
+    val copied = stringResource(Res.string.live_copied)
+    PublishedScreen(
+        creation = state.creation,
+        linkPreview = state.linkPreview,
+        categoryId = state.template?.categoryId,
+        isLoading = state.isLoading,
+        error = state.error,
+        onDone = onDone,
+        onCopy = { url ->
+            copier.copy(url)
+            messenger.show(copied, MessageTone.Success)
+        },
+        onShareTo = { target ->
+            val url = state.creation?.shareUrl ?: return@PublishedScreen
+            val text = shareText(shareLine, url)
+            if (target == null) share.share(text) else share.shareTo(target, text)
+        },
+        onShowQr = { showQr = true },
+        onRetry = viewModel::refresh,
+    )
+    val url = state.creation?.shareUrl
+    if (showQr && url != null) {
+        QrSheet(url = url, momentTitle = state.linkPreview?.title, shareLine = shareLine, onDismiss = { showQr = false })
     }
 }

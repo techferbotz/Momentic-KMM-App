@@ -4,6 +4,7 @@ import com.ferbotz.momentic.data.util.isEmailAddress
 import com.ferbotz.momentic.data.util.isWebUrl
 import com.ferbotz.momentic.data.util.mailtoUri
 import com.ferbotz.momentic.data.util.resolveWebUrl
+import com.ferbotz.momentic.data.util.telUri
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -45,5 +46,12 @@ class WebLinksTest {
         assertTrue(isEmailAddress("support@ferbotz.com"))
         assertFalse(isEmailAddress("a@b.com?cc=evil@x.com"))
         assertEquals("mailto:support@ferbotz.com?subject=Hi%20there", mailtoUri("support@ferbotz.com", subject = "Hi there"))
+    }
+
+    @Test
+    fun telUri_keepsTheDigitsAndALeadingPlus() {
+        assertEquals("tel:+919876543210", telUri("+91 98765 43210"))
+        assertEquals("tel:02227654321", telUri("(022) 2765-4321"))
+        assertEquals(null, telUri("call me"))
     }
 }

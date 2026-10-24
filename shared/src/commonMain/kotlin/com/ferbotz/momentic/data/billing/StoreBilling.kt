@@ -10,6 +10,8 @@ data class StoreProduct(
     val title: String,
     /** Localised by the store, e.g. "₹100.00". */
     val formattedPrice: String,
+    /** The same price in millionths of the currency unit (₹599.00 = 599 000 000), when the store says — for "₹86 a day". */
+    val amountMicros: Long? = null,
 )
 
 /** How a store purchase ended. */

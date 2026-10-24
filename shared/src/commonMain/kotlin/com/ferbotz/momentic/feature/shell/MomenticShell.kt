@@ -227,11 +227,12 @@ private fun MomenticNavHost(navController: NavHostController, modifier: Modifier
                 onPreview = { url, templateId, creationId -> navController.navigate(PreviewRoute(url, templateId, creationId)) },
                 onEdit = { templateId, creationId -> navController.navigate(EditorRoute(templateId, creationId)) },
                 onPublish = { navController.navigate(PublishRoute(it)) },
-                onViewRsvps = { navController.navigate(RsvpsRoute(it)) },
+                onViewRsvps = { id, title -> navController.navigate(RsvpsRoute(id, title)) },
             )
         }
         composable<RsvpsRoute> { entry ->
-            RsvpsScreenRoute(creationId = entry.toRoute<RsvpsRoute>().creationId, onBack = navController::back)
+            val route = entry.toRoute<RsvpsRoute>()
+            RsvpsScreenRoute(creationId = route.creationId, momentTitle = route.momentTitle, onBack = navController::back)
         }
         composable<PurchasesRoute> {
             PurchasesScreenRoute(onBack = navController::back)

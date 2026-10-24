@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.ferbotz.momentic.data.util.isWebUrl
 import com.ferbotz.momentic.data.util.mailtoUri
+import com.ferbotz.momentic.data.util.telUri
 import com.ferbotz.momentic.platform.topViewController
 import platform.Foundation.NSURL
 import platform.SafariServices.SFSafariViewController
@@ -35,6 +36,13 @@ private class IosLinkOpener : LinkOpener {
         val nsUrl = NSURL.URLWithString(target) ?: return false
         // An App Store link opens in the App Store; anything else in Safari.
         UIApplication.sharedApplication.openURL(nsUrl, options = emptyMap<Any?, Any>(), completionHandler = null)
+        return true
+    }
+
+    override fun call(phoneNumber: String): Boolean {
+        val url = telUri(phoneNumber)?.let { NSURL.URLWithString(it) } ?: return false
+        // iOS asks before it dials.
+        UIApplication.sharedApplication.openURL(url, options = emptyMap<Any?, Any>(), completionHandler = null)
         return true
     }
 

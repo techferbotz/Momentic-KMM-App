@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ferbotz.momentic.data.model.FeedSection
 import com.ferbotz.momentic.data.repository.CatalogueRepository
+import com.ferbotz.momentic.data.result.AppError
 import com.ferbotz.momentic.data.result.AppResult
 import com.ferbotz.momentic.presentation.util.toUserMessage
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ import kotlinx.coroutines.launch
  * @param isLoading the first load is in flight and there is nothing to show yet.
  * @param isRefreshing a pull-to-refresh is in flight (the sections stay on screen).
  * @param error a full-screen message when the first load failed.
+ * @param isOffline that failure was the connection: the screen shows its offline state and keeps retrying.
  * @param message a one-off note for a snackbar (a refresh that failed while content is showing).
  */
 data class FeedUiState(
@@ -26,6 +28,7 @@ data class FeedUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    val isOffline: Boolean = false,
     val message: String? = null,
 )
 
@@ -63,12 +66,12 @@ class FeedViewModel(private val catalogue: CatalogueRepository) : ViewModel() {
     private fun apply(result: AppResult<List<FeedSection>>) {
         when (result) {
             is AppResult.Success -> _uiState.update {
-                it.copy(sections = result.data, isLoading = false, isRefreshing = false, error = null)
+                it.copy(sections = result.data, isLoading = false, isRefreshing = false, error = null, isOffline = false)
             }
             is AppResult.Failure -> _uiState.update {
                 val message = result.error.toUserMessage()
                 if (it.sections.isEmpty()) {
-                    it.copy(isLoading = false, isRefreshing = false, error = message)
+                    it.copy(isLoading = false, isRefreshing = false, error = message, isOffline = result.error is AppError.Network)
                 } else {
                     // Keep what's on screen; a failed refresh is a note, not a dead end.
                     it.copy(isLoading = false, isRefreshing = false, message = message)

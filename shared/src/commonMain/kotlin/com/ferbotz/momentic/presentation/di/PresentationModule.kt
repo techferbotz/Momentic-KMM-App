@@ -67,7 +67,9 @@ val presentationModule: Module = module {
 
     // My moments
     factory { MomentsViewModel(get(), get(), get(), get(), get()) }
-    factory { params -> MomentDetailViewModel(creationId = params.get(), creations = get(), catalogue = get(), remoteConfig = get(), events = get()) }
+    factory { params ->
+        MomentDetailViewModel(creationId = params.get(), creations = get(), catalogue = get(), render = get(), remoteConfig = get(), events = get())
+    }
     factory { params -> RsvpsViewModel(creationId = params.get(), creations = get()) }
 
     // Account
@@ -81,10 +83,12 @@ val presentationModule: Module = module {
  * started global Koin without pulling in the koin-compose artifacts.
  *
  * @param parameters constructor arguments for a `factory { params -> … }` definition, e.g. a route id.
+ * @param key tells apart two view models of one class in the same owner — a sheet that should start
+ *   afresh each time it opens, say. Null: one per class.
  */
 @Composable
-inline fun <reified T : ViewModel> koinViewModel(noinline parameters: ParametersDefinition? = null): T =
-    viewModel { KoinPlatform.getKoin().get<T>(parameters = parameters) }
+inline fun <reified T : ViewModel> koinViewModel(key: String? = null, noinline parameters: ParametersDefinition? = null): T =
+    viewModel(key = key) { KoinPlatform.getKoin().get<T>(parameters = parameters) }
 
 /**
  * The same, scoped to [owner] — a nav graph's back-stack entry, say, so the screens of one tab share a

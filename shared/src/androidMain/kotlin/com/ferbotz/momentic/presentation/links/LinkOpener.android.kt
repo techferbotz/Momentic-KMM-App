@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import com.ferbotz.momentic.data.util.isWebUrl
 import com.ferbotz.momentic.data.util.mailtoUri
+import com.ferbotz.momentic.data.util.telUri
 import com.ferbotz.momentic.platform.findActivity
 import com.ferbotz.momentic.theme.Momentic
 
@@ -60,6 +61,20 @@ private class AndroidLinkOpener(
         if (activity == null) view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
             (activity ?: context).startActivity(view)
+            true
+        } catch (e: ActivityNotFoundException) {
+            false
+        }
+    }
+
+    override fun call(phoneNumber: String): Boolean {
+        val uri = telUri(phoneNumber) ?: return false
+        // DIAL, not CALL: the number waits in the dialer, so no permission is needed and nothing rings by surprise.
+        val dial = Intent(Intent.ACTION_DIAL, Uri.parse(uri))
+        val activity = context.findActivity()
+        if (activity == null) dial.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return try {
+            (activity ?: context).startActivity(dial)
             true
         } catch (e: ActivityNotFoundException) {
             false

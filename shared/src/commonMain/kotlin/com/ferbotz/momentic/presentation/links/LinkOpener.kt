@@ -39,6 +39,9 @@ interface LinkOpener {
         body: String? = null,
         onUnavailable: () -> Unit = {},
     )
+
+    /** Opens the phone's dialer with [phoneNumber] ready to call — a guest's number from an RSVP. False when nothing can dial. */
+    fun call(phoneNumber: String): Boolean
 }
 
 /** Remembers the platform [LinkOpener]; the platform bits (a `Context`, a view controller) come from the composition. */

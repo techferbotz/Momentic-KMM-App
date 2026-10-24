@@ -14,7 +14,8 @@ LaunchedEffect(vm) { vm.events.collect { event -> /* navigate, open, share */ } 
 
 `koinViewModel()` / `koinGet()` are in `presentation/di/PresentationModule.kt`. A view model is scoped to its
 NavHost back-stack entry; `koinViewModel(owner)` scopes it to another entry instead — Explore and Category share
-one `FeedViewModel` through the Explore graph's entry. Parameters are listed per screen below.
+one `FeedViewModel` through the Explore graph's entry. `koinViewModel(key = …)` keeps two of one class apart in
+the same entry (the Extend sheet's paywall starts afresh each time it opens). Parameters are listed per screen below.
 
 Conventions every screen shares:
 
@@ -70,7 +71,9 @@ whether the welcome shows before the app (`feature/gate/WelcomeGate`).
 ## Browse
 
 ### `FeedViewModel`
-State: `sections: List<FeedSection>` (category + `TemplateCard`s), `isLoading`, `isRefreshing`, `error`, `message`.
+State: `sections: List<FeedSection>` (category + `TemplateCard`s), `isLoading`, `isRefreshing`, `error`,
+`isOffline` (that first load failed for want of a connection — Explore shows its offline state and calls
+`refresh()` every 15 s), `message`.
 Intents: `refresh()` (pull-to-refresh), `retry()`, `messageShown()`.
 A card's `thumbnailUrl` is absolute (or null — five templates have no art yet; show a placeholder).
 `displayPerDay` is the backend's price copy ("from Rs.100/day"): show it as is.
@@ -80,6 +83,8 @@ State: `template: TemplateDetail?`, `isLoading`, `error`. Intent: `retry()`.
 `TemplateDetail` has the description, `previewImageUrls`, `tags`, `supportsRsvp`, `pricing` (label, bundles of
 days), `fields` (what the form will ask — worth summarising), and `canBeFilledIn` (false ⇒ "update the app to use
 this template").
+"What you'll add" is `presentation/template/whatYoullAdd(fields)`: one line per top-level field, by kind (a name,
+photos, words, a note, a date, a place, a choice), with a list's min–max; switches are left out.
 **See a live example** opens `resolveWebUrl(config.web.origin, template.previewCode)` in the app's own web
 frame (`WebPageRoute`, built on `platform/WebPage`). Only `greeting_open_letter` has a page on the web so far;
 the others show the renderer's branded "not available" page (contract changelog, 2026-10-09).
@@ -92,7 +97,8 @@ the others show the renderer's branded "not available" page (contract changelog,
 The form is **generated from `template.fields`** — never hard-code a template's inputs.
 
 State: `template`, `creationId` (null until first saved), `values`, `errors`, `examples`, `isSaving`,
-`isOpeningPreview`, `hasUnsavedChanges`, `uploadsInFlight`, `isLoading`, `loadError`, `message`.
+`isOpeningPreview`, `hasUnsavedChanges`, `uploadsInFlight`, `autosave` (`Idle` / `Saving` / `Saved` / `Offline` /
+`NotSaved` — the top bar's note), `confirmLeave`, `isLoading`, `loadError`, `message`.
 Helpers: `state.valueOf(path)`, `state.errorFor(path)`, `state.exampleFor(path)` ("e.g. Divya" placeholders).
 
 Addressing an input — `FieldPath(key)` for a top-level field, `FieldPath(groupKey, entryId, childKey)` for a child
@@ -127,12 +133,19 @@ quarter turns and the crop rectangle as fractions of the turned photo — to `ad
 retryable)` (`retryPhoto(path, slotId)` when retryable). `removePhoto(path, slotId)` frees it on the server.
 
 **Actions.**
+- **Autosave** — every change saves quietly after `AUTOSAVE_DELAY_MS` (1.5 s) without one; the first save creates
+  the draft. Malformed values wait (nothing is marked); offline, it tries again after `AUTOSAVE_RETRY_MS`; a
+  refusal (say, the drafts limit) is a `message`, and autosave pauses until a save the person asked for works.
 - `save()` — keeps a partial draft (only malformed values are refused, shown in `errors`).
-- `preview()` — saves, then emits `EditorEvent.OpenPreview(url)` → open it in the in-app browser.
+- `preview()` — requires every required field ("needed before you preview"), saves, then emits
+  `EditorEvent.OpenPreview(url)` → the Preview screen.
 - `continueToPublish()` — requires every required field (errors appear in `errors`), saves, then emits
   `EditorEvent.ContinueToPublish(creationId)` → navigate to Publish.
-- `delete()` — deletes the draft (or discards a never-saved form) and emits `EditorEvent.Closed`.
-- Leaving with `hasUnsavedChanges` — offer to save (`save()`) or discard.
+- `close()` — Back (the bar's, and the system's through `platform/SystemBack`): saves what changed, then emits
+  `EditorEvent.Closed`. When that can't be saved it sets `confirmLeave` (and marks a malformed value):
+  `keepEditing()` or `leaveWithoutSaving()` (lets go of the photos no save used).
+- `delete()` — deletes the draft (or discards a never-saved form) and emits `EditorEvent.Closed`; a pending
+  autosave is dropped.
 
 ---
 
@@ -141,10 +154,13 @@ retryable)` (`retryPhoto(path, slotId)` when retryable). `removePhoto(path, slot
 ### `PublishViewModel` — param `creationId`
 For a draft this **publishes**; for a published moment it **renews** (`kind`) — same link, more time.
 
-State: `creation`, `kind`, `tierLabel`, `displayPerDay`, `options: List<DurationOption>` (days, productId, store
-`price` when known), `selectedProductId`, `isSignedIn`, `isAvailable` + `unavailableReason`, `missingFields`,
-`stage` (`CHOOSING` → `PURCHASING` → `CONFIRMING` → `DONE`), `pendingPurchase`, `result` (`shareUrl`, `expiresAt`),
-`canPurchase`, `message`.
+State: `creation`, `template` (the summary's art, name and tier), `kind`, `tierLabel`, `displayPerDay`,
+`options: List<DurationOption>` (days, productId, store `price` and `perDay` — "₹86", from
+`StoreProduct.amountMicros` — when known), `selectedProductId`, `isSignedIn`, `isAvailable` + `unavailableReason`,
+`missingFields`, `stage` (`CHOOSING` → `PURCHASING` → `CONFIRMING` → `DONE`), `pendingPurchase`, `confirmError`
+(why a paid purchase's confirmation failed — "We couldn't make your link yet" shows it), `result` (`shareUrl`,
+`expiresAt`), `canPurchase`, `message`. `liveUntil(days, now, expiry, zone)` is the date each option reaches
+(renewing a live link counts on from its end).
 
 Intents: `select(productId)`, `purchase()`, `share()`, `editDraft()`, `retryLoad()`, `messageShown()`.
 Events: `SignInRequired` → show sign-in, then call `purchase()` again · `Published(result)` · `Share(url, text)` →
@@ -174,10 +190,13 @@ creation, for art and name); `canLoadMore`, `isLoadingMore`, `isLoading`, `isRef
 `pendingPurchases`, `message`.
 Intents: `refresh()`, `retry()`, `loadMore()` (at the end of the list), `delete(creationId)` (optimistic),
 `finishPendingPurchases()`, `messageShown()`. Stays current by itself after saves, publishes and deletes elsewhere.
+Creations have no title yet: `Creation.interimTitle()` is the first short line of text ("Divya"), and
+`dayAgo(…)` writes "edited yesterday" (`presentation/moments/MomentText.kt`).
 
 ### `MomentDetailViewModel` — param `creationId`
 State: `creation`, `template`, `stats` (views, `daysRemaining`, `dailyViews`, `rsvp` summary) when `showStats`,
-`canPublish`, `canRenew`, `isOpening`, `isDeleting`, `error`, `statsError`, `message`.
+`canPublish`, `canRenew`, `linkPreview` (a live moment's `og` title and image, read from its public page — the
+GET never counts a view), `isOpening`, `isDeleting`, `error`, `statsError`, `message`.
 Intents: `open()` (draft → fresh preview link; published → its link), `share()`, `edit()`, `publishOrRenew()`,
 `viewRsvps()`, `delete()`, `refresh()`.
 Events: `OpenUrl`, `Share`, `Edit(templateId, creationId)`, `Publish(creationId)`, `ViewRsvps(creationId)`, `Deleted`.
@@ -213,4 +232,6 @@ Events: `OpenUrl(url)` · `ComposeEmail(address, subject, body)` → `rememberLi
 | Copy to the clipboard | Ready: `platform/rememberTextCopier()` |
 | Save an image to the photo library (the QR code) | Ready: `platform/rememberImageSaver()` (MediaStore `Pictures/Momentic` / `PHPhotoLibrary`, add-only permission) |
 | Reduced motion | Ready: `platform/rememberReduceMotion()` |
+| Back that does something first (the form saves) | Ready: `platform/SystemBack(enabled) { … }` — the activity's handler on Android, Compose's on iOS |
+| Call a guest | Ready: `LinkOpener.call(phone)` — the dialer with the number ready (`tel:`), iOS asks first |
 | Store purchases | Data layer: a RevenueCat `StoreBilling` once the public SDK keys exist |

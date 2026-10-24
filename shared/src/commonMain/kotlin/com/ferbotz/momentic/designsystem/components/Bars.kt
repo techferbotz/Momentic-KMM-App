@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.ferbotz.momentic.designsystem.icons.MomenticIcons
 import com.ferbotz.momentic.resources.Res
 import com.ferbotz.momentic.resources.cd_back
+import com.ferbotz.momentic.resources.save_not_saved
 import com.ferbotz.momentic.resources.save_offline
 import com.ferbotz.momentic.resources.save_saved
 import com.ferbotz.momentic.resources.save_saving
@@ -173,6 +175,15 @@ fun TabHeader(
     }
 }
 
+/**
+ * The app's background behind the status bar, over a screen that scrolls under it — so the clock and
+ * icons never sit on top of the content passing beneath.
+ */
+@Composable
+fun StatusBarScrim(modifier: Modifier = Modifier, color: Color = Momentic.colors.background) {
+    Box(modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(color))
+}
+
 /** A small label pill in a top bar — "Example". */
 @Composable
 fun TopBarBadge(text: String, modifier: Modifier = Modifier) {
@@ -189,13 +200,17 @@ fun TopBarBadge(text: String, modifier: Modifier = Modifier) {
 }
 
 /** Where the form's autosave is. */
-enum class SaveStatus { Saving, Saved, Offline }
+enum class SaveStatus { Saving, Saved, Offline, NotSaved }
 
 /** The quiet autosave note in the form's top bar. Announced politely when it changes. */
 @Composable
 fun SaveIndicator(status: SaveStatus, modifier: Modifier = Modifier) {
     val c = Momentic.colors
-    val color = if (status == SaveStatus.Saved) c.success else c.inkSoft
+    val color = when (status) {
+        SaveStatus.Saved -> c.success
+        SaveStatus.NotSaved -> c.warning
+        else -> c.inkSoft
+    }
     Row(
         modifier = modifier
             .padding(horizontal = MomenticSpacing.sm)
@@ -207,6 +222,7 @@ fun SaveIndicator(status: SaveStatus, modifier: Modifier = Modifier) {
             SaveStatus.Saving -> Spinner(color = c.inkSoft, size = 12.dp)
             SaveStatus.Saved -> Icon(MomenticIcons.CloudCheck, null, tint = color, modifier = Modifier.size(18.dp))
             SaveStatus.Offline -> Icon(MomenticIcons.WifiOff, null, tint = color, modifier = Modifier.size(16.dp))
+            SaveStatus.NotSaved -> Icon(MomenticIcons.Alert, null, tint = color, modifier = Modifier.size(16.dp))
         }
         Text(
             text = stringResource(
@@ -214,6 +230,7 @@ fun SaveIndicator(status: SaveStatus, modifier: Modifier = Modifier) {
                     SaveStatus.Saving -> Res.string.save_saving
                     SaveStatus.Saved -> Res.string.save_saved
                     SaveStatus.Offline -> Res.string.save_offline
+                    SaveStatus.NotSaved -> Res.string.save_not_saved
                 },
             ),
             style = Momentic.type.captionStrong,

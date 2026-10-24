@@ -57,6 +57,17 @@ fun mailtoUri(address: String, subject: String? = null, body: String? = null): S
     return if (fields.isEmpty()) uri else uri + "?" + fields.joinToString("&")
 }
 
+/**
+ * A `tel:` URI for a phone number as a guest typed it ("+91 98765 43210"): its digits, keeping a
+ * leading plus. Null when there are no digits to dial.
+ */
+fun telUri(phoneNumber: String): String? {
+    val trimmed = phoneNumber.trim()
+    val digits = trimmed.filter { it.isDigit() }
+    if (digits.isEmpty()) return null
+    return "tel:" + (if (trimmed.startsWith("+")) "+" else "") + digits
+}
+
 /** Percent-encodes all but RFC 3986's unreserved characters, byte by byte in UTF-8. */
 private fun percentEncode(value: String): String = buildString {
     for (byte in value.encodeToByteArray()) {

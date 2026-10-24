@@ -147,6 +147,7 @@ fun DesignGallery() {
                 modifier = Modifier.padding(horizontal = MomenticSpacing.gutter),
             )
 
+            Section("Screens") { ScreenSamples() }
             Section("Field kit") { FieldKitDemo() }
             Section("Colour") { ColourSwatches() }
             Section("Occasion tints") { OccasionTints() }

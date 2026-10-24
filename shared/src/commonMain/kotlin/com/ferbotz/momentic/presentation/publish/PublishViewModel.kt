@@ -7,6 +7,7 @@ import com.ferbotz.momentic.data.billing.StoreBilling
 import com.ferbotz.momentic.data.model.Creation
 import com.ferbotz.momentic.data.model.Pricing
 import com.ferbotz.momentic.data.model.SessionState
+import com.ferbotz.momentic.data.model.TemplateDetail
 import com.ferbotz.momentic.data.repository.AuthRepository
 import com.ferbotz.momentic.data.repository.CatalogueRepository
 import com.ferbotz.momentic.data.repository.CreationRepository
@@ -26,11 +27,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** One duration the moment can be bought for. [price] is the store's localised price, when known. */
+/**
+ * One duration the moment can be bought for. [price] is the store's localised price and [perDay] what
+ * that comes to a day ("₹86"), when the store has said.
+ */
 data class DurationOption(
     val days: Int,
     val productId: String,
     val price: String?,
+    val perDay: String? = null,
 )
 
 /** Where the purchase is. */
@@ -56,13 +61,16 @@ enum class PublishStage {
  * @param isAvailable false when remote config has switched publishing (or renewal) off, or this build
  *   has no store set up; [unavailableReason] says which.
  * @param missingFields labels of required fields the draft hasn't filled yet — publishing waits for them.
+ * @param template the moment's template — its name, art and tier for the summary at the top.
  * @param pendingPurchase a purchase already paid for this moment whose confirmation hasn't landed; "Try
  *   again" finishes it with the same transaction instead of charging again.
+ * @param confirmError why the last confirmation of a paid purchase failed, for "We couldn't make your link yet".
  */
 data class PublishUiState(
     val isLoading: Boolean = true,
     val loadError: String? = null,
     val creation: Creation? = null,
+    val template: TemplateDetail? = null,
     val kind: PublishKind = PublishKind.PUBLISH,
     val tierLabel: String = "",
     val displayPerDay: String = "",
@@ -74,6 +82,7 @@ data class PublishUiState(
     val missingFields: List<String> = emptyList(),
     val stage: PublishStage = PublishStage.CHOOSING,
     val pendingPurchase: PendingPurchase? = null,
+    val confirmError: String? = null,
     val result: PublishResult? = null,
     val message: String? = null,
 ) {
@@ -188,7 +197,7 @@ class PublishViewModel(
     }
 
     private suspend fun confirm(kind: PublishKind, storeTransactionId: String, productId: String) {
-        _uiState.update { it.copy(stage = PublishStage.CONFIRMING) }
+        _uiState.update { it.copy(stage = PublishStage.CONFIRMING, confirmError = null) }
         when (val result = publishing.publish(kind, creationId, storeTransactionId, productId)) {
             is AppResult.Success -> {
                 _uiState.update {
@@ -204,15 +213,12 @@ class PublishViewModel(
             is AppResult.Failure -> {
                 val pending = pendingFor(kind)
                 _uiState.update {
-                    it.copy(
-                        stage = PublishStage.CHOOSING,
-                        pendingPurchase = pending,
-                        message = if (pending != null) {
-                            "Your payment went through. We couldn't finish publishing just yet — tap to try again; you won't be charged twice."
-                        } else {
-                            result.error.toUserMessage()
-                        },
-                    )
+                    if (pending != null) {
+                        // Paid but not confirmed: the screen says so in full ("We couldn't make your link yet").
+                        it.copy(stage = PublishStage.CHOOSING, pendingPurchase = pending, confirmError = result.error.toUserMessage())
+                    } else {
+                        it.copy(stage = PublishStage.CHOOSING, pendingPurchase = null, message = result.error.toUserMessage())
+                    }
                 }
             }
         }
@@ -249,7 +255,15 @@ class PublishViewModel(
             } else {
                 emptyMap()
             }
-            val options = bundles.map { DurationOption(it.days, it.productId, prices[it.productId]?.formattedPrice) }
+            val options = bundles.map { bundle ->
+                val product = prices[bundle.productId]
+                DurationOption(
+                    days = bundle.days,
+                    productId = bundle.productId,
+                    price = product?.formattedPrice,
+                    perDay = product?.let { p -> p.amountMicros?.let { perDayPrice(p.formattedPrice, it, bundle.days) } },
+                )
+            }
 
             val features = remoteConfig.config.features
             val reason = when {
@@ -264,6 +278,7 @@ class PublishViewModel(
                 it.copy(
                     isLoading = false,
                     creation = creation,
+                    template = template,
                     kind = kind,
                     tierLabel = pricing?.label.orEmpty(),
                     displayPerDay = pricing?.displayPerDay ?: template?.displayPerDay.orEmpty(),
